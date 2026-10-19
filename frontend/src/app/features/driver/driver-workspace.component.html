@@ -1,0 +1,434 @@
+
+    <app-navbar />
+
+    <div class="max-w-7xl mx-auto p-4 space-y-6">
+
+      <!-- ================================= -->
+      <!-- PERFIL DEL REPARTIDOR -->
+      <!-- ================================= -->
+
+      <div
+        *ngIf="service.repartidorProfile() as perfil"
+        class="bg-gradient-to-r from-blue-700 via-blue-800 to-slate-900 text-white p-5 rounded-3xl shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+      >
+
+        <div>
+
+          <div class="flex items-center gap-2">
+
+            <span
+              class="px-2.5 py-0.5 rounded-full bg-white/20 text-white font-bold text-xs uppercase"
+            >
+              Modo Repartidor
+            </span>
+
+            <span
+              class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"
+            >
+            </span>
+
+            <span class="text-xs text-blue-100">
+              {{ perfil.estado }}
+            </span>
+
+          </div>
+
+          <h1 class="text-xl font-black mt-1">
+            Placa: {{ perfil.placaVehiculo }}
+          </h1>
+
+        </div>
+
+
+        <div class="flex items-center gap-2">
+
+          <select
+            [ngModel]="perfil.estado"
+            (ngModelChange)="cambiarMiEstado($event)"
+            [disabled]="guardandoEstado()"
+            class="px-3 py-2 rounded-xl text-xs font-bold text-slate-900"
+          >
+
+            <option
+              value="DISPONIBLE"
+              [disabled]="tieneEntregasActivas()"
+            >
+              DISPONIBLE
+            </option>
+
+            <option value="EN_RUTA">
+              EN_RUTA
+            </option>
+
+            <option
+              value="DESCONECTADO"
+              [disabled]="tieneEntregasActivas()"
+            >
+              DESCONECTADO
+            </option>
+
+          </select>
+
+          @if (tieneEntregasActivas()) {
+            <span class="max-w-40 text-[10px] text-blue-100">
+              Mantén el estado EN_RUTA mientras tengas entregas activas.
+            </span>
+          }
+
+
+          <button
+            type="button"
+            (click)="actualizarMiPosicion()"
+            class="px-4 py-2 bg-white text-slate-900 rounded-xl font-bold text-xs shadow-md hover:bg-slate-100"
+          >
+            Actualizar mi posición GPS
+          </button>
+
+        </div>
+
+      </div>
+
+      @if (perfilRepartidorFaltante()) {
+        <section class="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          <p class="font-bold">Tu cuenta todavía no tiene un perfil de repartidor.</p>
+          <p class="mt-1">
+            Solicita al administrador que lo cree en Gestión de usuarios con tu placa. Cuando esté creado, vuelve a cargar esta página.
+          </p>
+        </section>
+      }
+
+      <!-- ================================= -->
+      <!-- ENTREGAS + MAPA -->
+      <!-- ================================= -->
+
+      <div
+        class="grid grid-cols-1 lg:grid-cols-12 gap-4"
+      >
+
+        <!-- ================================= -->
+        <!-- LISTA DE PEDIDOS -->
+        <!-- ================================= -->
+
+        <div class="lg:col-span-6 space-y-4">
+
+          <div
+            *ngFor="let p of service.pedidos()"
+            class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3"
+          >
+
+            <div
+              class="flex items-center justify-between border-b pb-3"
+            >
+
+              <span
+                class="font-mono font-bold text-blue-700 text-xs"
+              >
+                #{{ p.id.slice(-6) }}
+              </span>
+
+              <span
+                class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800"
+              >
+                {{ p.estado }}
+              </span>
+
+            </div>
+
+
+            <div
+              class="text-xs text-slate-600 space-y-1"
+            >
+
+              <p>
+                <span class="font-semibold text-slate-800">
+                  Dirección:
+                </span>
+
+                {{ p.direccionEntrega }}
+              </p>
+
+
+              <p *ngIf="p.observaciones">
+
+                <span class="font-semibold text-slate-800">
+                  Observaciones:
+                </span>
+
+                {{ p.observaciones }}
+
+              </p>
+
+
+              <p>
+
+                <span class="font-semibold text-slate-800">
+                  Total a cobrar:
+                </span>
+
+                <b class="text-slate-900 text-sm">
+                  S/. {{ p.total.toFixed(2) }}
+                  ({{ p.metodoPago }})
+                </b>
+
+              </p>
+
+
+              <p
+                *ngIf="p.llegadaEn"
+                class="text-emerald-700 font-semibold"
+              >
+                Llegaste el
+                {{ p.llegadaEn | date:'HH:mm' }}
+              </p>
+
+            </div>
+
+
+            <!-- ================================= -->
+            <!-- ACCIONES DEL PEDIDO -->
+            <!-- ================================= -->
+
+            <div
+              class="pt-2 flex items-center gap-2 flex-wrap"
+            >
+
+              <!-- PASO 1: ACEPTAR -->
+
+              <button
+                *ngIf="puedeAceptar(p)"
+                type="button"
+                (click)="aceptar(p.id)"
+                class="flex-1 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold"
+              >
+                Aceptar entrega
+              </button>
+
+
+              <!-- PASO 2: SALIR A RUTA -->
+
+              <button
+                *ngIf="
+                  p.entregaAceptada &&
+                  (
+                    p.estado === 'CONFIRMADO' ||
+                    p.estado === 'EN_PREPARACION'
+                  )
+                "
+                type="button"
+                (click)="salirARuta(p.id)"
+                class="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold"
+              >
+                {{ p.estado === 'CONFIRMADO'
+                  ? 'Preparar y salir a entregar'
+                  : 'Salir a entregar' }}
+              </button>
+
+
+              <!-- PASO 3: MARCAR LLEGADA -->
+
+              <button
+                *ngIf="
+                  p.estado === 'EN_CAMINO' &&
+                  !p.llegadaEn
+                "
+                type="button"
+                (click)="marcarLlegada(p.id)"
+                class="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold"
+              >
+                Marcar llegada
+              </button>
+
+
+              <!-- PASO 4: CONFIRMAR ENTREGA -->
+
+              <button
+                *ngIf="p.estado === 'EN_CAMINO'"
+                type="button"
+                (click)="cambiarEstado(p.id, 'ENTREGADO')"
+                class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold"
+              >
+                Confirmar entrega
+              </button>
+
+
+              <!-- ENTREGA FALLIDA -->
+
+              <button
+                *ngIf="p.estado === 'EN_CAMINO'"
+                type="button"
+                (click)="abrirEntregaFallida(p)"
+                class="py-2.5 px-3 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-xl text-xs font-bold"
+              >
+                No se pudo entregar
+              </button>
+
+
+              <!-- INCIDENCIA -->
+
+              <button
+                *ngIf="
+                  p.estado === 'EN_CAMINO' ||
+                  p.estado === 'EN_PREPARACION'
+                "
+                type="button"
+                (click)="abrirReporteIncidencia(p.id)"
+                class="py-2.5 px-3 bg-red-100 hover:bg-red-200 text-red-700 rounded-xl text-xs font-bold"
+              >
+                Reportar incidencia
+              </button>
+
+            </div>
+
+          </div>
+
+
+          <!-- SIN PEDIDOS -->
+
+          <div
+            *ngIf="!service.pedidos().length"
+            class="bg-white p-8 rounded-2xl border border-slate-200 text-center text-slate-400 text-xs"
+          >
+            No tienes entregas activas en este momento.
+          </div>
+
+        </div>
+
+
+        <!-- ================================= -->
+        <!-- MAPA -->
+        <!-- ================================= -->
+
+        <div
+          class="lg:col-span-6 bg-white p-2 rounded-2xl border border-slate-200 shadow-sm"
+        >
+
+          <app-ayacucho-map
+            [companyConfig]="service.companyConfigDisplay()"
+            [repartidores]="miRepartidorComoLista()"
+            [clientes]="service.clientes()"
+            [pedidos]="service.pedidos()"
+            [showAlmacen]="false"
+            height="460px"
+          >
+          </app-ayacucho-map>
+
+        </div>
+
+      </div>
+
+
+      <!-- ================================= -->
+      <!-- MODAL ENTREGA FALLIDA -->
+      <!-- ================================= -->
+
+      <div
+        *ngIf="pedidoFallido()"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60"
+      >
+
+        <div
+          class="bg-white rounded-2xl max-w-md w-full p-6 space-y-3"
+        >
+
+          <h3 class="font-black text-slate-900">
+            Registrar entrega fallida
+          </h3>
+
+
+          <textarea
+            [(ngModel)]="motivoFallido"
+            rows="3"
+            placeholder="¿Qué ocurrió? (cliente ausente, dirección incorrecta, etc.)"
+            class="w-full border rounded-xl px-3 py-2 text-xs"
+          >
+          </textarea>
+
+
+          <div
+            class="flex justify-end gap-2"
+          >
+
+            <button
+              type="button"
+              (click)="pedidoFallido.set(null)"
+              class="px-3 py-2 text-slate-600 text-xs font-bold"
+            >
+              Cancelar
+            </button>
+
+
+            <button
+              type="button"
+              (click)="confirmarEntregaFallida()"
+              [disabled]="!motivoFallido.trim()"
+              class="px-4 py-2 bg-orange-600 text-white rounded-xl text-xs font-bold disabled:opacity-50"
+            >
+              Registrar
+            </button>
+
+          </div>
+
+          <!-- MODAL REPORTE DE INCIDENCIA -->
+          <div
+            *ngIf="pedidoIncidencia() as pedido"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4"
+          >
+            <section class="w-full max-w-md space-y-4 rounded-2xl bg-white p-6 shadow-2xl">
+              <div>
+                <h3 class="font-black text-slate-900">Reportar incidencia</h3>
+                <p class="mt-1 text-xs text-slate-500">
+                  Pedido #{{ pedido.id.slice(-6) }}
+                </p>
+              </div>
+
+              <label class="block text-xs font-bold text-slate-700">
+                Tipo de incidencia
+                <select
+                  [(ngModel)]="tipoIncidencia"
+                  name="tipoIncidencia"
+                  class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm"
+                >
+                  <option *ngFor="let tipo of tiposIncidencia" [ngValue]="tipo.value">
+                    {{ tipo.label }}
+                  </option>
+                </select>
+              </label>
+
+              <label class="block text-xs font-bold text-slate-700">
+                Descripción
+                <textarea
+                  [(ngModel)]="descripcionIncidencia"
+                  name="descripcionIncidencia"
+                  rows="3"
+                  maxlength="1000"
+                  placeholder="Describe brevemente qué ocurrió"
+                  class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm"
+                ></textarea>
+              </label>
+
+              <div class="flex justify-end gap-2">
+                <button
+                  type="button"
+                  (click)="pedidoIncidencia.set(null)"
+                  class="rounded-xl px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  (click)="confirmarReporteIncidencia()"
+                  [disabled]="!descripcionIncidencia.trim()"
+                  class="rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-700 disabled:opacity-50"
+                >
+                  Enviar reporte
+                </button>
+              </div>
+            </section>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  

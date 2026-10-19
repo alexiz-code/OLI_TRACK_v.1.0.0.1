@@ -1,0 +1,43 @@
+
+    <div class="contenedor">
+
+      <h2>Nuestro catálogo</h2>
+
+      @if (productos.length > 0) {
+
+        <div class="grid">
+
+          @for (p of productos; track p.id) {
+
+            <div class="tarjeta">
+
+              <h4>
+                {{ p.nombre }}
+              </h4>
+
+              <p>
+                {{ p.descripcion }}
+              </p>
+
+              <p class="precio">
+                S/ {{ p.precioUnitario.toFixed(2) }}
+                /
+                {{ p.unidadMedida }}
+              </p>
+
+            </div>
+
+          }
+
+        </div>
+
+      } @else {
+
+        <p>
+          No hay productos disponibles por ahora.
+        </p>
+
+      }
+
+    </div>
+  

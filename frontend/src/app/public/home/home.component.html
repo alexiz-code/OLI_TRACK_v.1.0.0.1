@@ -1,0 +1,216 @@
+
+    <main class="min-h-screen bg-slate-50 text-slate-800">
+
+      <!-- PORTADA -->
+      <section class="bg-gradient-to-r from-blue-800 to-blue-900 text-white">
+        <div class="mx-auto max-w-7xl px-6 py-16 md:py-24">
+          <div class="max-w-3xl">
+
+            <p class="mb-3 text-sm font-semibold uppercase tracking-widest text-blue-200">
+              OLI FRESH ICE
+            </p>
+
+            <h1 class="text-4xl font-bold leading-tight md:text-6xl">
+              Hielo de calidad, directamente hasta tu negocio
+            </h1>
+
+            <p class="mt-6 max-w-2xl text-lg text-blue-50">
+              Realiza tus pedidos, consulta nuestros productos y sigue
+              el proceso de entrega desde OLITRACK.
+            </p>
+
+            @if (cargandoSesion()) {
+              <p class="mt-8 text-sm text-blue-100" role="status">
+                Verificando tu sesión...
+              </p>
+            } @else {
+              @if (usuarioActual(); as usuario) {
+                <div class="mt-8 flex flex-wrap gap-3">
+
+                  <a
+                    [routerLink]="rutaCuenta(usuario.rol)"
+                    class="rounded-lg bg-white px-6 py-3 font-semibold text-blue-900 hover:bg-blue-50">
+                    Ir a mi cuenta
+                  </a>
+
+                  @if (usuario.rol === 'CLIENTE') {
+                    <a
+                      routerLink="/cliente"
+                      class="rounded-lg border border-white/60 px-6 py-3 font-semibold text-white hover:bg-white/10">
+                      Realizar un pedido
+                    </a>
+                  }
+
+                </div>
+              } @else {
+                <div class="mt-8 flex flex-wrap gap-3">
+
+                  <a
+                    routerLink="/login"
+                    class="rounded-lg bg-white px-6 py-3 font-semibold text-blue-900 hover:bg-blue-50">
+                    Iniciar sesión
+                  </a>
+
+                  <a
+                    routerLink="/registro"
+                    class="rounded-lg border border-white/60 px-6 py-3 font-semibold text-white hover:bg-white/10">
+                    Crear una cuenta
+                  </a>
+
+                </div>
+              }
+            }
+
+          </div>
+        </div>
+      </section>
+
+      <!-- CATÁLOGO -->
+      <section class="mx-auto max-w-7xl px-6 py-12">
+
+        <div class="mb-8">
+          <h2 class="text-3xl font-bold text-slate-900">
+            Nuestros productos
+          </h2>
+
+          <p class="mt-2 text-slate-600">
+            Consulta las presentaciones disponibles.
+          </p>
+        </div>
+
+        @if (cargandoProductos()) {
+          <div class="rounded-xl border border-slate-200 bg-white p-8 text-center">
+            <p class="text-slate-600">Cargando productos...</p>
+          </div>
+        } @else if (errorProductos()) {
+          <div class="rounded-xl border border-amber-200 bg-amber-50 p-6">
+
+            <p class="font-medium text-amber-900">
+              {{ errorProductos() }}
+            </p>
+
+            <button
+              type="button"
+              (click)="cargarProductos()"
+              class="mt-4 rounded-lg bg-amber-700 px-4 py-2 text-white hover:bg-amber-800">
+              Intentar nuevamente
+            </button>
+
+          </div>
+        } @else if (productosDestacados().length === 0) {
+          <div class="rounded-xl border border-slate-200 bg-white p-8 text-center">
+            <p class="text-slate-600">
+              Actualmente no hay productos disponibles.
+            </p>
+          </div>
+        } @else {
+          <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+
+            @for (producto of productosDestacados(); track producto.id) {
+              <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-md">
+
+                @if (producto.imagenUrl) {
+                  <img
+                    [src]="producto.imagenUrl"
+                    [alt]="producto.nombre"
+                    class="h-52 w-full object-cover"
+                    loading="lazy">
+                } @else {
+                  <div class="flex h-52 items-center justify-center bg-slate-100">
+                    <span class="text-sm font-semibold uppercase tracking-widest text-slate-500">
+                      OLI FRESH ICE
+                    </span>
+                  </div>
+                }
+
+                <div class="p-5">
+
+                  <h3 class="text-xl font-bold text-slate-900">
+                    {{ producto.nombre }}
+                  </h3>
+
+                  <p class="mt-2 min-h-10 text-sm text-slate-600">
+                    {{ producto.descripcion || 'Producto de OLI FRESH ICE.' }}
+                  </p>
+
+                  <div class="mt-5 flex items-center justify-between gap-3">
+
+                    <div>
+                      <p class="text-2xl font-bold text-blue-800">
+                        {{ producto.precioUnitario | currency:'PEN':'symbol':'1.2-2' }}
+                      </p>
+
+                      <p class="text-sm text-slate-500">
+                        Por {{ producto.unidadMedida }}
+                      </p>
+                    </div>
+
+                    @if (usuarioActual()?.rol === 'CLIENTE') {
+                      <a
+                        routerLink="/cliente"
+                        class="rounded-lg bg-blue-800 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-900">
+                        Pedir
+                      </a>
+                    } @else {
+                      <a
+                        routerLink="/login"
+                        class="rounded-lg bg-blue-800 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-900">
+                        Pedir
+                      </a>
+                    }
+
+                  </div>
+                </div>
+
+              </article>
+            }
+
+          </div>
+        }
+
+      </section>
+
+      <!-- BENEFICIOS -->
+      <section class="bg-white">
+        <div class="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-6 py-12 md:grid-cols-3">
+
+          <article class="rounded-xl bg-slate-50 p-6">
+            <h3 class="text-lg font-bold">
+              Pedidos sencillos
+            </h3>
+
+            <p class="mt-2 text-sm text-slate-600">
+              Consulta los productos y gestiona tus pedidos desde tu cuenta.
+            </p>
+          </article>
+
+          <article class="rounded-xl bg-slate-50 p-6">
+            <h3 class="text-lg font-bold">
+              Seguimiento de entregas
+            </h3>
+
+            <p class="mt-2 text-sm text-slate-600">
+              Consulta el estado de tus pedidos durante el proceso de reparto.
+            </p>
+          </article>
+
+          <article class="rounded-xl bg-slate-50 p-6">
+            <h3 class="text-lg font-bold">
+              Acceso por usuario
+            </h3>
+
+            <p class="mt-2 text-sm text-slate-600">
+              OLITRACK ofrece accesos según el rol asignado a cada usuario.
+            </p>
+          </article>
+
+        </div>
+      </section>
+
+      <!-- PIE DE PÁGINA -->
+      <footer class="bg-slate-900 px-6 py-6 text-center text-sm text-slate-300">
+        © OLI FRESH ICE E.I.R.L. — OLITRACK
+      </footer>
+
+    </main>
+  

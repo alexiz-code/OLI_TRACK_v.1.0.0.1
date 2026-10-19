@@ -1,0 +1,267 @@
+
+    .registro-container {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      background: #f8fafc;
+      box-sizing: border-box;
+    }
+
+    .registro-card {
+      width: 100%;
+      max-width: 540px;
+      padding: 35px;
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, .12);
+      box-sizing: border-box;
+    }
+
+    h1 {
+      margin: 0;
+      text-align: center;
+      color: #1d4ed8;
+      font-size: 32px;
+    }
+
+    h2 {
+      margin: 10px 0 25px;
+      text-align: center;
+      color: #333;
+    }
+
+    .pasos {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 25px;
+    }
+
+    .pasos div {
+      flex: 1;
+      padding: 10px;
+      border-radius: 8px;
+      background: #eee;
+      color: #666;
+      text-align: center;
+    }
+
+    .pasos .activo {
+      background: #2563eb;
+      color: white;
+      font-weight: 600;
+    }
+
+    .campo {
+      min-width: 0;
+      margin-bottom: 18px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 7px;
+      color: #333;
+      font-weight: 600;
+    }
+
+    input {
+      display: block;
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-sizing: border-box;
+      font-size: 15px;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, .12);
+    }
+
+    input.ng-invalid.ng-touched {
+      border-color: #d32f2f;
+    }
+
+    small {
+      display: block;
+      margin-top: 5px;
+      color: #d32f2f;
+      font-size: 13px;
+    }
+
+    .error {
+      margin-bottom: 15px;
+      padding: 12px;
+      border: 1px solid #ffcdd2;
+      border-radius: 8px;
+      background: #ffebee;
+      color: #b91c1c;
+      font-size: 14px;
+      overflow-wrap: anywhere;
+    }
+
+    .estado-carga {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 18px;
+      padding: 12px;
+      border-radius: 8px;
+      background: #eff6ff;
+      color: #1d4ed8;
+      font-size: 14px;
+    }
+
+    .spinner {
+      width: 17px;
+      height: 17px;
+      flex-shrink: 0;
+      border: 2px solid #bfdbfe;
+      border-top-color: #1d4ed8;
+      border-radius: 50%;
+      animation: girar .8s linear infinite;
+    }
+
+    @keyframes girar {
+      to { transform: rotate(360deg); }
+    }
+
+    button {
+      width: 100%;
+      padding: 13px;
+      border: none;
+      border-radius: 8px;
+      background: #2563eb;
+      color: white;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    button:hover:not(:disabled) {
+      background: #1d4ed8;
+    }
+
+    button:disabled {
+      opacity: .6;
+      cursor: not-allowed;
+    }
+
+    .ubicacion-seccion {
+      margin: 6px 0 22px;
+      padding: 16px;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      background: #f8fafc;
+    }
+
+    .ubicacion-seccion h3 {
+      margin: 0 0 8px;
+      color: #1d4ed8;
+      font-size: 17px;
+    }
+
+    .ayuda {
+      margin: 0 0 14px;
+      color: #64748b;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .fila {
+      display: flex;
+      gap: 12px;
+    }
+
+    .fila > .campo {
+      flex: 1;
+    }
+
+    .boton-mapa {
+      margin-bottom: 4px;
+      background: #2563eb;
+    }
+
+    .boton-mapa:hover:not(:disabled) {
+      background: #1d4ed8;
+    }
+
+    .mapa-panel {
+      margin-top: 12px;
+    }
+
+    .mapa-registro {
+      width: 100%;
+      height: 320px;
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #e2e8f0;
+    }
+
+    .coordenadas-elegidas {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 6px 12px;
+      padding: 12px 0;
+      color: #475569;
+      font-size: 13px;
+    }
+
+    .coordenadas-elegidas strong {
+      color: #1d4ed8;
+      overflow-wrap: anywhere;
+    }
+
+    .boton-confirmar-mapa {
+      background: #1d4ed8;
+    }
+
+    .botones {
+      display: flex;
+      gap: 10px;
+    }
+
+    .botones button {
+      flex: 1;
+    }
+
+    .botones .secundario {
+      background: #757575;
+    }
+
+    .login {
+      margin-top: 20px;
+      color: #555;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    .login a {
+      color: #1d4ed8;
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .login a:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 600px) {
+      .registro-card {
+        padding: 25px 20px;
+      }
+
+      .fila,
+      .botones {
+        flex-direction: column;
+      }
+
+      .mapa-registro {
+        height: 280px;
+      }
+    }
+  

@@ -1,0 +1,1790 @@
+
+
+    <app-navbar></app-navbar>
+
+    <main
+      class="min-h-screen bg-slate-50 px-4 py-6 md:px-6 lg:px-8"
+    >
+
+      <div class="mx-auto max-w-7xl">
+
+        <!-- ================================================== -->
+        <!-- ENCABEZADO -->
+        <!-- ================================================== -->
+
+        <section
+          class="mb-6 rounded-2xl bg-white p-5 shadow-sm border border-slate-200"
+        >
+
+          <div
+            class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
+          >
+
+            <div>
+
+              <p class="text-sm font-medium text-blue-600">
+                Panel administrativo
+              </p>
+
+              <h1
+                class="mt-1 text-2xl font-bold text-slate-800"
+              >
+                {{ service.companyConfig().nombre }}
+              </h1>
+
+              <p class="mt-1 text-sm text-slate-500">
+                Administración y monitoreo de OLITRACK
+              </p>
+
+            </div>
+
+            <button
+              type="button"
+              (click)="recargarTodo()"
+              [disabled]="cargando()"
+              class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {{ cargando() ? 'Actualizando...' : 'Actualizar' }}
+            </button>
+
+          </div>
+
+        </section>
+
+        <!-- ================================================== -->
+        <!-- TABS -->
+        <!-- ================================================== -->
+
+        <nav
+          class="mb-6 overflow-x-auto rounded-2xl bg-white p-2 shadow-sm border border-slate-200"
+        >
+
+          <div class="flex min-w-max gap-2">
+
+            @for (item of tabs; track item.id) {
+
+              <button
+                type="button"
+                (click)="tab.set(item.id)"
+                class="rounded-xl px-4 py-2.5 text-sm font-semibold transition"
+                [class.bg-blue-600]="tab() === item.id"
+                [class.text-white]="tab() === item.id"
+                [class.bg-slate-100]="tab() !== item.id"
+                [class.text-slate-600]="tab() !== item.id"
+                [class.hover:bg-slate-200]="tab() !== item.id"
+              >
+                {{ item.label }}
+              </button>
+
+            }
+
+          </div>
+
+        </nav>
+
+        <!-- ================================================== -->
+        <!-- MAPA GPS -->
+        <!-- ================================================== -->
+
+        @if (tab() === 'MAPA_GPS') {
+
+          <section class="space-y-6">
+
+            <div
+              class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+            >
+
+              <div
+                class="rounded-2xl bg-white p-5 shadow-sm border border-slate-200"
+              >
+                <p class="text-sm text-slate-500">
+                  Repartidores
+                </p>
+
+                <p class="mt-2 text-3xl font-bold text-slate-800">
+                  {{ service.repartidores().length }}
+                </p>
+              </div>
+
+              <div
+                class="rounded-2xl bg-white p-5 shadow-sm border border-slate-200"
+              >
+                <p class="text-sm text-slate-500">
+                  En ruta
+                </p>
+
+                <p class="mt-2 text-3xl font-bold text-blue-600">
+                  {{ repartidoresEnRuta() }}
+                </p>
+              </div>
+
+              <div
+                class="rounded-2xl bg-white p-5 shadow-sm border border-slate-200"
+              >
+                <p class="text-sm text-slate-500">
+                  Clientes
+                </p>
+
+                <p class="mt-2 text-3xl font-bold text-emerald-600">
+                  {{ service.clientes().length }}
+                </p>
+              </div>
+
+              <div
+                class="rounded-2xl bg-white p-5 shadow-sm border border-slate-200"
+              >
+                <p class="text-sm text-slate-500">
+                  Pedidos activos
+                </p>
+
+                <p class="mt-2 text-3xl font-bold text-orange-600">
+                  {{ pedidosPendientes() + pedidosEnCamino() }}
+                </p>
+              </div>
+
+            </div>
+
+            <!-- MAPA -->
+
+            <div
+              class="overflow-hidden rounded-2xl bg-white shadow-sm border border-slate-200"
+            >
+
+              <div class="border-b border-slate-200 p-5">
+
+                <h2 class="text-lg font-bold text-slate-800">
+                  Ubicación de clientes y repartidores
+                </h2>
+
+                <p class="mt-1 text-sm text-slate-500">
+                  Monitoreo de las ubicaciones registradas en OLITRACK.
+                </p>
+
+              </div>
+
+              <div class="p-4">
+
+                <app-ayacucho-map
+                  [clientes]="service.clientes()"
+                  [repartidores]="service.repartidores()"
+                  [pedidos]="service.pedidos()"
+                  [companyConfig]="service.companyConfig()"
+                  [selectedClienteId]="selectedClienteId()"
+                  [selectedRepartidorId]="selectedRepartidorId()"
+                  [height]="'550px'"
+                  (selectCliente)="seleccionarCliente($event)"
+                  (selectRepartidor)="seleccionarRepartidor($event)"
+                >
+                </app-ayacucho-map>
+
+              </div>
+
+            </div>
+
+            <!-- SELECCIONADOS -->
+
+            <div
+              class="grid grid-cols-1 gap-4 lg:grid-cols-2"
+            >
+
+              @if (selectedCliente(); as cliente) {
+
+                <div
+                  class="rounded-2xl bg-white p-5 shadow-sm border border-slate-200"
+                >
+
+                  <div class="flex items-start justify-between">
+
+                    <div>
+
+                      <p
+                        class="text-xs font-semibold uppercase tracking-wide text-blue-600"
+                      >
+                        Cliente seleccionado
+                      </p>
+
+                      <h3
+                        class="mt-1 text-lg font-bold text-slate-800"
+                      >
+                        {{ cliente.nombreNegocio }}
+                      </h3>
+
+                    </div>
+
+                    <button
+                      type="button"
+                      (click)="selectedClienteId.set(undefined)"
+                      class="text-slate-400 hover:text-slate-700"
+                    >
+                      Cerrar
+                    </button>
+
+                  </div>
+
+                  <div class="mt-4 space-y-2 text-sm">
+
+                    <p>
+                      <strong>Dirección:</strong>
+                      {{ cliente.direccion }}
+                    </p>
+
+                    @if (cliente.referencia) {
+
+                      <p>
+                        <strong>Referencia:</strong>
+                        {{ cliente.referencia }}
+                      </p>
+
+                    }
+
+                    <p>
+                      <strong>Estado:</strong>
+
+                      <span
+                        class="ml-1 font-semibold"
+                        [class.text-emerald-600]="cliente.activo"
+                        [class.text-red-600]="!cliente.activo"
+                      >
+                        {{ cliente.activo ? 'Activo' : 'Inactivo' }}
+                      </span>
+                    </p>
+
+                  </div>
+
+                </div>
+
+              } @else {
+
+                <div
+                  class="rounded-2xl border border-dashed border-slate-300 bg-white p-5 text-sm text-slate-500"
+                >
+                  Selecciona un cliente en el mapa para ver sus datos.
+                </div>
+
+              }
+
+              @if (selectedRepartidor(); as repartidor) {
+
+                <div
+                  class="rounded-2xl bg-white p-5 shadow-sm border border-slate-200"
+                >
+
+                  <div class="flex items-start justify-between">
+
+                    <div>
+
+                      <p
+                        class="text-xs font-semibold uppercase tracking-wide text-blue-600"
+                      >
+                        Repartidor seleccionado
+                      </p>
+
+                      <h3
+                        class="mt-1 text-lg font-bold text-slate-800"
+                      >
+                        {{ nombreUsuarioRepartidor(repartidor) }}
+                      </h3>
+
+                    </div>
+
+                    <button
+                      type="button"
+                      (click)="selectedRepartidorId.set(undefined)"
+                      class="text-slate-400 hover:text-slate-700"
+                    >
+                      Cerrar
+                    </button>
+
+                  </div>
+
+                  <div class="mt-4 space-y-2 text-sm">
+
+                    <p>
+                      <strong>Placa:</strong>
+                      {{ repartidor.placaVehiculo }}
+                    </p>
+
+                    <p>
+                      <strong>Estado:</strong>
+
+                      <span
+                        class="ml-1 font-semibold"
+                        [class.text-emerald-600]="repartidor.estado === 'DISPONIBLE'"
+                        [class.text-blue-600]="repartidor.estado === 'EN_RUTA'"
+                        [class.text-slate-500]="repartidor.estado === 'DESCONECTADO'"
+                      >
+                        {{ repartidor.estado }}
+                      </span>
+                    </p>
+
+                    @if (repartidor.ubicacionActual) {
+
+                      <p>
+                        <strong>Latitud:</strong>
+                        {{ repartidor.ubicacionActual.latitud }}
+                      </p>
+
+                      <p>
+                        <strong>Longitud:</strong>
+                        {{ repartidor.ubicacionActual.longitud }}
+                      </p>
+
+                    }
+
+                  </div>
+
+                </div>
+
+              } @else {
+
+                <div
+                  class="rounded-2xl border border-dashed border-slate-300 bg-white p-5 text-sm text-slate-500"
+                >
+                  Selecciona un repartidor en el mapa para ver sus datos.
+                </div>
+
+              }
+
+            </div>
+
+          </section>
+
+        }
+
+        <!-- ================================================== -->
+        <!-- PEDIDOS -->
+        <!-- ================================================== -->
+
+        @if (tab() === 'PEDIDOS') {
+
+          <section class="space-y-6">
+
+            <div
+              class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+            >
+
+              <div
+                class="rounded-2xl bg-white p-5 shadow-sm border border-slate-200"
+              >
+                <p class="text-sm text-slate-500">
+                  Total de pedidos
+                </p>
+
+                <p class="mt-2 text-3xl font-bold text-slate-800">
+                  {{ service.pedidos().length }}
+                </p>
+              </div>
+
+              <div
+                class="rounded-2xl bg-white p-5 shadow-sm border border-slate-200"
+              >
+                <p class="text-sm text-slate-500">
+                  Pendientes
+                </p>
+
+                <p class="mt-2 text-3xl font-bold text-amber-600">
+                  {{ pedidosPendientes() }}
+                </p>
+              </div>
+
+              <div
+                class="rounded-2xl bg-white p-5 shadow-sm border border-slate-200"
+              >
+                <p class="text-sm text-slate-500">
+                  En camino
+                </p>
+
+                <p class="mt-2 text-3xl font-bold text-blue-600">
+                  {{ pedidosEnCamino() }}
+                </p>
+              </div>
+
+              <div
+                class="rounded-2xl bg-white p-5 shadow-sm border border-slate-200"
+              >
+                <p class="text-sm text-slate-500">
+                  Entregados
+                </p>
+
+                <p class="mt-2 text-3xl font-bold text-emerald-600">
+                  {{ pedidosEntregados() }}
+                </p>
+              </div>
+
+            </div>
+
+            <div
+              class="overflow-hidden rounded-2xl bg-white shadow-sm border border-slate-200"
+            >
+
+              <div class="border-b border-slate-200 p-5">
+
+                <h2 class="text-lg font-bold text-slate-800">
+                  Gestión de pedidos
+                </h2>
+
+              </div>
+
+              <div class="overflow-x-auto">
+
+                <table class="min-w-full text-sm">
+
+                  <thead class="bg-slate-50">
+
+                    <tr>
+
+                      <th class="px-4 py-3 text-left font-semibold text-slate-600">
+                        Pedido
+                      </th>
+
+                      <th class="px-4 py-3 text-left font-semibold text-slate-600">
+                        Cliente
+                      </th>
+
+                      <th class="px-4 py-3 text-left font-semibold text-slate-600">
+                        Estado
+                      </th>
+
+                      <th class="px-4 py-3 text-right font-semibold text-slate-600">
+                        Total
+                      </th>
+
+                      <th class="px-4 py-3 text-left font-semibold text-slate-600">
+                        Fecha
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody class="divide-y divide-slate-100">
+
+                    @for (pedido of service.pedidos(); track pedido.id) {
+
+                      <tr class="hover:bg-slate-50">
+
+                        <td class="px-4 py-3 font-semibold text-slate-800">
+                          #{{ pedido.id }}
+                        </td>
+
+                        <td class="px-4 py-3 text-slate-600">
+                          {{ nombreCliente(pedido.clienteId) }}
+                        </td>
+
+                        <td class="px-4 py-3">
+
+                          <span
+                            class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold"
+                            [class]="estadoClase(pedido.estado)"
+                          >
+                            {{ pedido.estado }}
+                          </span>
+
+                        </td>
+
+                        <td
+                          class="px-4 py-3 text-right font-semibold text-slate-800"
+                        >
+                          S/. {{ pedido.total | number:'1.2-2' }}
+                        </td>
+
+                        <td class="px-4 py-3 text-slate-500">
+                          {{ pedido.creadoEn | date:'dd/MM/yyyy HH:mm' }}
+                        </td>
+
+                      </tr>
+
+                    } @empty {
+
+                      <tr>
+
+                        <td
+                          colspan="5"
+                          class="px-4 py-10 text-center text-slate-500"
+                        >
+                          No hay pedidos registrados.
+                        </td>
+
+                      </tr>
+
+                    }
+
+                  </tbody>
+
+                </table>
+
+              </div>
+
+            </div>
+
+          </section>
+
+        }
+
+        <!-- ================================================== -->
+        <!-- USUARIOS -->
+        <!-- ================================================== -->
+
+        @if (tab() === 'USUARIOS') {
+
+          <section class="space-y-6">
+
+            <div
+              class="flex flex-col gap-3 rounded-2xl bg-white p-5 shadow-sm border border-slate-200 sm:flex-row sm:items-center sm:justify-between"
+            >
+
+              <div>
+
+                <h2 class="text-xl font-bold text-slate-800">
+                  Usuarios
+                </h2>
+
+                <p class="mt-1 text-sm text-slate-500">
+                  Administra cuentas, roles y acceso al sistema.
+                </p>
+
+              </div>
+
+              <button
+                type="button"
+                (click)="abrirModalUsuario()"
+                class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
+              >
+                + Nuevo usuario
+              </button>
+
+            </div>
+
+            <div
+              class="overflow-hidden rounded-2xl bg-white shadow-sm border border-slate-200"
+            >
+
+              <div class="overflow-x-auto">
+
+                <table class="min-w-full text-sm">
+
+                  <thead class="bg-slate-50">
+
+                    <tr>
+
+                      <th class="px-4 py-3 text-left font-semibold text-slate-600">
+                        Usuario
+                      </th>
+
+                      <th class="px-4 py-3 text-left font-semibold text-slate-600">
+                        Teléfono
+                      </th>
+
+                      <th class="px-4 py-3 text-left font-semibold text-slate-600">
+                        Placa
+                      </th>
+
+                      <th class="px-4 py-3 text-left font-semibold text-slate-600">
+                        Correo
+                      </th>
+
+                      <th class="px-4 py-3 text-left font-semibold text-slate-600">
+                        Rol
+                      </th>
+
+                      <th class="px-4 py-3 text-left font-semibold text-slate-600">
+                        Acciones
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody class="divide-y divide-slate-100">
+
+                    @for (grupo of usuariosPorCargo(); track grupo.value) {
+
+                      <tr class="bg-slate-50">
+                        <th colspan="6" class="px-4 py-3 text-left text-xs font-black uppercase tracking-wide text-slate-600">
+                          {{ grupo.label }}
+                          <span class="ml-1 rounded-full bg-white px-2 py-0.5 text-slate-500">
+                            {{ grupo.usuarios.length }}
+                          </span>
+                        </th>
+                      </tr>
+
+                      @for (usuario of grupo.usuarios; track usuario.id) {
+
+                        <tr class="hover:bg-slate-50">
+
+                        <td class="px-4 py-3">
+
+                          <div class="font-semibold text-slate-800">
+                            {{ usuario.nombre }}
+                          </div>
+
+                        </td>
+
+                        <td class="px-4 py-3 text-slate-500">
+                          {{ usuario.telefono || '—' }}
+                        </td>
+
+                        <td class="px-4 py-3 font-mono text-slate-600">
+                          {{ placaDeUsuario(usuario.id) }}
+                        </td>
+
+                        <td class="px-4 py-3 text-slate-600">
+                          {{ usuario.email }}
+                        </td>
+
+                        <td class="px-4 py-3">
+
+                          <select
+                            class="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                            [ngModel]="usuario.rol"
+                            (ngModelChange)="cambiarRol(usuario, $event)"
+                          >
+
+                            @for (rol of roles; track rol.value) {
+
+                              <option [ngValue]="rol.value">
+                                {{ rol.label }}
+                              </option>
+
+                            }
+
+                          </select>
+
+                        </td>
+
+                        <td class="px-4 py-3">
+
+                          <div class="flex flex-wrap gap-2">
+
+                            @if (usuario.activo && usuario.rol === 'REPARTIDOR' && !tienePerfilRepartidor(usuario.id)) {
+                              <button
+                                type="button"
+                                (click)="crearPerfilRepartidor(usuario)"
+                                class="rounded-lg bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 hover:bg-amber-100"
+                              >
+                                Crear perfil repartidor
+                              </button>
+                            }
+
+                            <button
+                              type="button"
+                              (click)="abrirEdicionUsuario(usuario)"
+                              class="rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+                            >
+                              Editar
+                            </button>
+
+                            <button
+                              type="button"
+                              (click)="restablecerPassword(usuario)"
+                              class="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200"
+                            >
+                              Restablecer
+                            </button>
+
+                          </div>
+
+                        </td>
+
+                      </tr>
+                      } @empty {
+
+                      <tr>
+
+                        <td
+                          colspan="6"
+                          class="px-4 py-10 text-center text-slate-500"
+                        >
+                          No hay usuarios en este cargo.
+                        </td>
+
+                      </tr>
+
+                      }
+                    } @empty {
+                      <tr>
+                        <td colspan="6" class="px-4 py-10 text-center text-slate-500">
+                          No hay usuarios registrados.
+                        </td>
+                      </tr>
+                    }
+
+                  </tbody>
+
+                </table>
+
+              </div>
+
+            </div>
+
+          </section>
+
+        }
+
+        <!-- ================================================== -->
+        <!-- CATALOGO -->
+        <!-- ================================================== -->
+
+        @if (tab() === 'CATALOGO') {
+
+          <section class="space-y-6">
+
+            <div
+              class="flex flex-col gap-3 rounded-2xl bg-white p-5 shadow-sm border border-slate-200 sm:flex-row sm:items-center sm:justify-between"
+            >
+
+              <div>
+
+                <h2 class="text-xl font-bold text-slate-800">
+                  Catálogo de productos
+                </h2>
+
+                <p class="mt-1 text-sm text-slate-500">
+                  Administra productos y disponibilidad.
+                </p>
+
+              </div>
+
+              <button
+                type="button"
+                (click)="abrirNuevoProducto()"
+                class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
+              >
+                + Nuevo producto
+              </button>
+
+            </div>
+
+            <div
+              class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+            >
+
+              <div
+                class="rounded-2xl bg-white p-5 shadow-sm border border-slate-200"
+              >
+                <p class="text-sm text-slate-500">
+                  Productos
+                </p>
+
+                <p class="mt-2 text-3xl font-bold text-slate-800">
+                  {{ service.productos().length }}
+                </p>
+              </div>
+
+              <div
+                class="rounded-2xl bg-white p-5 shadow-sm border border-slate-200"
+              >
+                <p class="text-sm text-slate-500">
+                  Activos
+                </p>
+
+                <p class="mt-2 text-3xl font-bold text-emerald-600">
+                  {{ productosActivos() }}
+                </p>
+              </div>
+
+              <div
+                class="rounded-2xl bg-white p-5 shadow-sm border border-slate-200"
+              >
+                <p class="text-sm text-slate-500">
+                  Inactivos
+                </p>
+
+                <p class="mt-2 text-3xl font-bold text-red-600">
+                  {{ productosInactivos() }}
+                </p>
+              </div>
+
+              <div
+                class="rounded-2xl bg-white p-5 shadow-sm border border-slate-200"
+              >
+                <p class="text-sm text-slate-500">
+                  Stock total
+                </p>
+
+                <p class="mt-2 text-3xl font-bold text-blue-600">
+                  {{ stockTotal() | number:'1.0-2' }}
+                </p>
+              </div>
+
+            </div>
+
+            <div
+              class="overflow-hidden rounded-2xl bg-white shadow-sm border border-slate-200"
+            >
+
+              <div class="overflow-x-auto">
+
+                <table class="min-w-full text-sm">
+
+                  <thead class="bg-slate-50">
+
+                    <tr>
+
+                      <th class="px-4 py-3 text-left font-semibold text-slate-600">
+                        Producto
+                      </th>
+
+                      <th class="px-4 py-3 text-left font-semibold text-slate-600">
+                        Categoría
+                      </th>
+
+                      <th class="px-4 py-3 text-right font-semibold text-slate-600">
+                        Precio
+                      </th>
+
+                      <th class="px-4 py-3 text-right font-semibold text-slate-600">
+                        Stock
+                      </th>
+
+                      <th class="px-4 py-3 text-left font-semibold text-slate-600">
+                        Estado
+                      </th>
+
+                      <th class="px-4 py-3 text-left font-semibold text-slate-600">
+                        Acciones
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody class="divide-y divide-slate-100">
+
+                    @for (producto of service.productos(); track producto.id) {
+
+                      <tr class="hover:bg-slate-50">
+
+                        <td class="px-4 py-3">
+
+                          <div class="font-semibold text-slate-800">
+                            {{ producto.nombre }}
+                          </div>
+
+                          @if (producto.descripcion) {
+
+                            <div class="mt-1 max-w-xs text-xs text-slate-500">
+                              {{ producto.descripcion }}
+                            </div>
+
+                          }
+
+                        </td>
+
+                        <td class="px-4 py-3 text-slate-600">
+                          {{ producto.categoria }}
+                        </td>
+
+                        <td
+                          class="px-4 py-3 text-right font-semibold text-slate-800"
+                        >
+                          S/. {{ producto.precioUnitario | number:'1.2-2' }}
+                        </td>
+
+                        <td class="px-4 py-3 text-right">
+
+                          <span
+                            class="font-semibold"
+                            [class]="stockClase(stockActualProducto(producto))"
+                          >
+                            {{ stockActualProducto(producto) }}
+                          </span>
+
+                        </td>
+
+                        <td class="px-4 py-3">
+
+                          <span
+                            class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold"
+                            [class.bg-emerald-100]="producto.activo"
+                            [class.text-emerald-700]="producto.activo"
+                            [class.bg-red-100]="!producto.activo"
+                            [class.text-red-700]="!producto.activo"
+                          >
+                            {{ producto.activo ? 'Activo' : 'Inactivo' }}
+                          </span>
+
+                        </td>
+
+                        <td class="px-4 py-3">
+
+                          <div class="flex flex-wrap gap-2">
+
+                            <button
+                              type="button"
+                              (click)="editarProducto(producto)"
+                              class="rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+                            >
+                              Editar
+                            </button>
+
+                            <button
+                              type="button"
+                              (click)="abrirMovimientoInventario(producto)"
+                              class="rounded-lg bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 hover:bg-amber-100"
+                            >
+                              Registrar stock
+                            </button>
+
+                            @if (producto.activo) {
+
+                              <button
+                                type="button"
+                                (click)="desactivarProducto(producto)"
+                                class="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100"
+                              >
+                                Desactivar
+                              </button>
+
+                            } @else {
+
+                              <button
+                                type="button"
+                                (click)="reactivarProducto(producto)"
+                                class="rounded-lg bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                              >
+                                Reactivar
+                              </button>
+
+                            }
+
+                          </div>
+
+                        </td>
+
+                      </tr>
+
+                    } @empty {
+
+                      <tr>
+
+                        <td
+                          colspan="6"
+                          class="px-4 py-10 text-center text-slate-500"
+                        >
+                          No hay productos registrados.
+                        </td>
+
+                      </tr>
+
+                    }
+
+                  </tbody>
+
+                </table>
+
+              </div>
+
+            </div>
+
+          </section>
+
+        }
+
+        <!-- ================================================== -->
+        <!-- REPORTES -->
+        <!-- ================================================== -->
+
+        @if (tab() === 'REPORTES') {
+
+          <section class="space-y-6">
+
+            <div>
+
+              <h2 class="text-xl font-bold text-slate-800">
+                Reportes y estadísticas
+              </h2>
+
+              <p class="mt-1 text-sm text-slate-500">
+                Resumen de la operación de OLITRACK.
+              </p>
+
+            </div>
+
+            <app-incidencias-charts
+              [incidencias]="service.incidencias()"
+              [repartidores]="service.repartidores()"
+              [usuarios]="service.users()"
+            />
+
+            @if (service.dashboard(); as d) {
+
+              <div
+                class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+              >
+
+                <div
+                  class="rounded-2xl bg-white p-5 shadow-sm border border-slate-200"
+                >
+                  <p class="text-sm text-slate-500">
+                    Pedidos totales
+                  </p>
+
+                  <p class="mt-2 text-3xl font-bold text-slate-800">
+                    {{ d.pedidosTotales }}
+                  </p>
+                </div>
+
+                <div
+                  class="rounded-2xl bg-white p-5 shadow-sm border border-slate-200"
+                >
+                  <p class="text-sm text-slate-500">
+                    Entregados
+                  </p>
+
+                  <p class="mt-2 text-3xl font-bold text-emerald-600">
+                    {{ d.pedidosEntregados }}
+                  </p>
+                </div>
+
+                <div
+                  class="rounded-2xl bg-white p-5 shadow-sm border border-slate-200"
+                >
+                  <p class="text-sm text-slate-500">
+                    Tiempo de envío promedio
+                  </p>
+                  <p class="mt-1 text-xs text-slate-400">
+                    Desde que sale a ruta hasta la llegada; se excluyen pedidos sin hora de salida registrada.
+                  </p>
+
+                  <p class="mt-2 text-3xl font-bold text-blue-600">
+                    {{ d.tiempoPromedioMinutos | number:'1.0-2' }}
+                    <span class="text-base font-medium">
+                      min
+                    </span>
+                  </p>
+                </div>
+
+                <div
+                  class="rounded-2xl bg-white p-5 shadow-sm border border-slate-200"
+                >
+                  <p class="text-sm text-slate-500">
+                    Ingresos totales
+                  </p>
+
+                  <p class="mt-2 text-3xl font-bold text-emerald-600">
+                    S/. {{ d.ingresosTotales | number:'1.2-2' }}
+                  </p>
+                </div>
+
+              </div>
+
+              <div
+                class="overflow-hidden rounded-2xl bg-white shadow-sm border border-slate-200"
+              >
+
+                <div class="border-b border-slate-200 p-5">
+
+                  <h3 class="font-bold text-slate-800">
+                    Resumen por día
+                  </h3>
+
+                </div>
+
+                <div class="overflow-x-auto">
+
+                  <table class="min-w-full text-sm">
+
+                    <thead class="bg-slate-50">
+
+                      <tr>
+
+                        <th class="px-4 py-3 text-left font-semibold text-slate-600">
+                          Fecha
+                        </th>
+
+                        <th class="px-4 py-3 text-right font-semibold text-slate-600">
+                          Pedidos
+                        </th>
+
+                        <th class="px-4 py-3 text-right font-semibold text-slate-600">
+                          Entregados
+                        </th>
+
+                        <th class="px-4 py-3 text-right font-semibold text-slate-600">
+                          Con demora
+                        </th>
+
+                        <th class="px-4 py-3 text-right font-semibold text-slate-600">
+                          Ingresos
+                        </th>
+
+                      </tr>
+
+                    </thead>
+
+                    <tbody class="divide-y divide-slate-100">
+
+                      @for (dia of d.resumenPorDia; track dia.fecha) {
+
+                        <tr class="hover:bg-slate-50">
+
+                          <td class="px-4 py-3 text-slate-600">
+                            {{ dia.fecha }}
+                          </td>
+
+                          <td class="px-4 py-3 text-right">
+                            {{ dia.pedidos }}
+                          </td>
+
+                          <td class="px-4 py-3 text-right text-emerald-600">
+                            {{ dia.entregados }}
+                          </td>
+
+                          <td class="px-4 py-3 text-right text-red-600">
+                            {{ dia.conDemora }}
+                          </td>
+
+                          <td class="px-4 py-3 text-right font-semibold">
+                            S/. {{ dia.ingresos | number:'1.2-2' }}
+                          </td>
+
+                        </tr>
+
+                      } @empty {
+
+                        <tr>
+
+                          <td
+                            colspan="5"
+                            class="px-4 py-10 text-center text-slate-500"
+                          >
+                            No hay información disponible.
+                          </td>
+
+                        </tr>
+
+                      }
+
+                    </tbody>
+
+                  </table>
+
+                </div>
+
+              </div>
+
+            } @else {
+
+              <div
+                class="rounded-2xl bg-white p-10 text-center shadow-sm border border-slate-200"
+              >
+
+                <p class="text-slate-500">
+                  No se pudo cargar el dashboard.
+                </p>
+
+                <button
+                  type="button"
+                  (click)="recargarTodo()"
+                  class="mt-4 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                >
+                  Intentar nuevamente
+                </button>
+
+              </div>
+
+            }
+
+          </section>
+
+        }
+
+      </div>
+
+    </main>
+
+    <!-- ====================================================== -->
+    <!-- MODAL USUARIO -->
+    <!-- ====================================================== -->
+
+    @if (mostrarModalUsuario()) {
+
+      <div
+        class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4"
+        (click)="cerrarModalUsuario()"
+      >
+
+        <div
+          class="w-full max-w-lg rounded-2xl bg-white shadow-2xl"
+          (click)="$event.stopPropagation()"
+        >
+
+          <div
+            class="flex items-center justify-between border-b border-slate-200 px-5 py-4"
+          >
+
+            <div>
+
+              <h2 class="text-lg font-bold text-slate-800">
+                Nuevo usuario
+              </h2>
+
+              <p class="text-sm text-slate-500">
+                Registra un nuevo usuario en OLITRACK.
+              </p>
+
+            </div>
+
+            <button
+              type="button"
+              (click)="cerrarModalUsuario()"
+              class="text-xl text-slate-400 hover:text-slate-700"
+            >
+              Cerrar
+            </button>
+
+          </div>
+
+          <form
+            class="space-y-4 p-5"
+            (ngSubmit)="guardarUsuario()"
+          >
+
+            <div>
+
+              <label
+                class="mb-1.5 block text-sm font-semibold text-slate-700"
+              >
+                Nombre completo
+              </label>
+
+              <input
+                type="text"
+                [(ngModel)]="usuarioForm.nombre"
+                name="nombre"
+                [class]="campo"
+                placeholder="Ingrese el nombre"
+                autocomplete="name"
+              />
+
+            </div>
+
+            <div>
+
+              <label
+                class="mb-1.5 block text-sm font-semibold text-slate-700"
+              >
+                Correo electrónico
+              </label>
+
+              <input
+                type="email"
+                [(ngModel)]="usuarioForm.email"
+                name="email"
+                [class]="campo"
+                placeholder="usuario@correo.com"
+                autocomplete="email"
+              />
+
+            </div>
+
+            <div>
+
+              <label
+                class="mb-1.5 block text-sm font-semibold text-slate-700"
+              >
+                Contraseña
+              </label>
+
+              <input
+                type="password"
+                [(ngModel)]="usuarioForm.password"
+                name="password"
+                [class]="campo"
+                placeholder="Mínimo 6 caracteres"
+                autocomplete="new-password"
+              />
+
+            </div>
+
+            <div>
+
+              <label
+                class="mb-1.5 block text-sm font-semibold text-slate-700"
+              >
+                Teléfono
+              </label>
+
+              <input
+                type="tel"
+                [(ngModel)]="usuarioForm.telefono"
+                name="telefono"
+                [class]="campo"
+                placeholder="999 999 999"
+                autocomplete="tel"
+              />
+
+            </div>
+
+            <div>
+
+              <label
+                class="mb-1.5 block text-sm font-semibold text-slate-700"
+              >
+                Rol
+              </label>
+
+              <select
+                [(ngModel)]="usuarioForm.rol"
+                name="rol"
+                (ngModelChange)="cambiarRolNuevoUsuario($event)"
+                [class]="campo"
+              >
+
+                @for (rol of roles; track rol.value) {
+
+                  <option [ngValue]="rol.value">
+                    {{ rol.label }}
+                  </option>
+
+                }
+
+              </select>
+
+              <p class="mt-1.5 text-xs text-slate-500">
+                El rol seleccionado será enviado al backend al crear el usuario.
+              </p>
+
+            </div>
+
+            @if (usuarioForm.rol === 'REPARTIDOR') {
+              <div>
+                <label
+                  class="mb-1.5 block text-sm font-semibold text-slate-700"
+                  for="placaVehiculo"
+                >
+                  Placa del vehículo
+                </label>
+                <input
+                  id="placaVehiculo"
+                  type="text"
+                  [(ngModel)]="usuarioForm.placaVehiculo"
+                  name="placaVehiculo"
+                  [class]="campo"
+                  placeholder="Ej. ABC-123"
+                  maxlength="20"
+                  autocomplete="off"
+                  required
+                />
+              </div>
+            }
+
+            <div
+              class="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end"
+            >
+
+              <button
+                type="button"
+                (click)="cerrarModalUsuario()"
+                class="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="submit"
+                [disabled]="guardando()"
+                class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {{ guardando() ? 'Creando...' : 'Crear usuario' }}
+              </button>
+
+            </div>
+
+          </form>
+
+        </div>
+
+      </div>
+
+    }
+
+    @if (usuarioEditando()) {
+      <div
+        class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4"
+        (click)="cerrarEdicionUsuario()"
+      >
+        <section
+          class="w-full max-w-lg rounded-2xl bg-white shadow-2xl"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="editar-usuario-titulo"
+          (click)="$event.stopPropagation()"
+        >
+          <div class="border-b border-slate-200 px-5 py-4">
+            <h2 id="editar-usuario-titulo" class="text-lg font-bold text-slate-800">
+              Editar usuario
+            </h2>
+            <p class="text-sm text-slate-500">{{ usuarioEditando()?.email }}</p>
+          </div>
+          <form class="space-y-4 p-5" (ngSubmit)="guardarEdicionUsuario()">
+            <label class="block text-sm font-semibold text-slate-700">
+              Nombre completo
+              <input
+                [(ngModel)]="usuarioEdicionForm.nombre"
+                name="nombreEdicionUsuario"
+                type="text"
+                maxlength="120"
+                autocomplete="name"
+                required
+                [class]="campo"
+              />
+            </label>
+            <label class="block text-sm font-semibold text-slate-700">
+              Teléfono
+              <input
+                [(ngModel)]="usuarioEdicionForm.telefono"
+                name="telefonoEdicionUsuario"
+                type="tel"
+                autocomplete="tel"
+                pattern="\+?[0-9]{6,15}"
+                [class]="campo"
+              />
+              <span class="mt-1 block text-xs font-normal text-slate-500">
+                Dejar vacío conserva el teléfono actual.
+              </span>
+            </label>
+            <p class="text-xs text-slate-500">
+              El correo, la contraseña y el rol se administran por separado.
+            </p>
+            <div class="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                (click)="cerrarEdicionUsuario()"
+                [disabled]="guardando()"
+                class="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                [disabled]="guardando()"
+                class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {{ guardando() ? 'Guardando...' : 'Guardar cambios' }}
+              </button>
+            </div>
+          </form>
+        </section>
+      </div>
+    }
+
+    @if (productoParaMovimiento()) {
+      <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
+        <section class="w-full max-w-md space-y-4 rounded-2xl bg-white p-6 shadow-2xl">
+          <div>
+            <h2 class="text-lg font-black text-slate-900">Movimiento de inventario</h2>
+            <p class="text-sm text-slate-500">{{ productoParaMovimiento()?.nombre }}</p>
+            <p class="mt-1 text-sm font-semibold text-slate-700">
+              Stock actual: {{ stockActualProducto(productoParaMovimiento()) }}
+            </p>
+            @if (!tieneInventario(productoParaMovimiento())) {
+              <p class="mt-1 text-xs text-amber-700">
+                Este producto no tiene inventario; se inicializará en cero al registrar una entrada o ajuste.
+              </p>
+            }
+          </div>
+          <label class="block text-sm font-semibold text-slate-700">
+            Tipo de movimiento
+            <select [(ngModel)]="movimientoForm.tipo" name="movimientoTipo" class="mt-1 w-full rounded-xl border border-slate-300 p-2.5">
+              <option value="ENTRADA">Entrada de stock</option>
+              <option value="SALIDA">Salida de stock</option>
+              <option value="AJUSTE">Ajuste</option>
+            </select>
+          </label>
+          <label class="block text-sm font-semibold text-slate-700">
+            {{ movimientoForm.tipo === 'AJUSTE' ? 'Stock final' : 'Cantidad' }}
+            <input [(ngModel)]="movimientoForm.cantidad" name="movimientoCantidad" type="number" min="1" step="1" class="mt-1 w-full rounded-xl border border-slate-300 p-2.5" />
+          </label>
+          <label class="block text-sm font-semibold text-slate-700">
+            Motivo (opcional)
+            <input [(ngModel)]="movimientoForm.motivo" name="movimientoMotivo" type="text" maxlength="250" class="mt-1 w-full rounded-xl border border-slate-300 p-2.5" />
+          </label>
+          <div class="flex justify-end gap-2">
+            <button type="button" (click)="cerrarMovimientoInventario()" [disabled]="guardandoMovimiento()" class="rounded-xl border px-4 py-2 text-sm font-semibold">Cancelar</button>
+            <button type="button" (click)="guardarMovimientoInventario()" [disabled]="guardandoMovimiento()" class="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
+              {{ guardandoMovimiento() ? 'Guardando…' : 'Registrar movimiento' }}
+            </button>
+          </div>
+        </section>
+      </div>
+    }
+
+    <!-- ====================================================== -->
+    <!-- MODAL PRODUCTO -->
+    <!-- ====================================================== -->
+
+    @if (mostrarModalProducto()) {
+
+      <div
+        class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4"
+        (click)="cerrarModalProducto()"
+      >
+
+        <div
+          class="w-full max-w-lg rounded-2xl bg-white shadow-2xl"
+          (click)="$event.stopPropagation()"
+        >
+
+          <div
+            class="flex items-center justify-between border-b border-slate-200 px-5 py-4"
+          >
+
+            <div>
+
+              <h2 class="text-lg font-bold text-slate-800">
+                {{
+                  productoEditando()
+                    ? 'Editar producto'
+                    : 'Nuevo producto'
+                }}
+              </h2>
+
+              <p class="text-sm text-slate-500">
+                Completa los datos del producto.
+              </p>
+
+            </div>
+
+            <button
+              type="button"
+              (click)="cerrarModalProducto()"
+              class="text-xl text-slate-400 hover:text-slate-700"
+            >
+              Cerrar
+            </button>
+
+          </div>
+
+          <form
+            class="space-y-4 p-5"
+            (ngSubmit)="guardarProducto()"
+          >
+
+            <div>
+
+              <label
+                class="mb-1.5 block text-sm font-semibold text-slate-700"
+              >
+                Nombre
+              </label>
+
+              <input
+                type="text"
+                [(ngModel)]="productoForm.nombre"
+                name="productoNombre"
+                [class]="campo"
+                placeholder="Ej. Bolsa de hielo 10 kg"
+              />
+
+            </div>
+
+            <div>
+
+              <label
+                class="mb-1.5 block text-sm font-semibold text-slate-700"
+              >
+                Descripción
+              </label>
+
+              <textarea
+                [(ngModel)]="productoForm.descripcion"
+                name="productoDescripcion"
+                [class]="campo"
+                rows="3"
+                placeholder="Descripción del producto"
+              ></textarea>
+
+            </div>
+
+            <div
+              class="grid grid-cols-1 gap-4 sm:grid-cols-2"
+            >
+
+              <div>
+
+                <label
+                  class="mb-1.5 block text-sm font-semibold text-slate-700"
+                >
+                  Categoría
+                </label>
+
+                <input
+                  type="text"
+                  [(ngModel)]="productoForm.categoria"
+                  name="productoCategoria"
+                  [class]="campo"
+                  placeholder="Hielo"
+                />
+
+              </div>
+
+              <div>
+
+                <label
+                  class="mb-1.5 block text-sm font-semibold text-slate-700"
+                >
+                  Unidad de medida
+                </label>
+
+                <input
+                  type="text"
+                  [(ngModel)]="productoForm.unidadMedida"
+                  name="productoUnidad"
+                  [class]="campo"
+                  placeholder="Bolsa"
+                />
+
+              </div>
+
+            </div>
+
+            <div>
+
+              <label
+                class="mb-1.5 block text-sm font-semibold text-slate-700"
+              >
+                Precio unitario
+              </label>
+
+              <input
+                type="number"
+                [(ngModel)]="productoForm.precioUnitario"
+                name="productoPrecio"
+                [class]="campo"
+                min="0"
+                step="0.01"
+              />
+
+            </div>
+
+            @if (!productoEditando()) {
+              <div>
+                <label class="mb-1.5 block text-sm font-semibold text-slate-700">
+                  Stock inicial
+                </label>
+                <input
+                  type="number"
+                  [(ngModel)]="productoForm.stockInicial"
+                  name="productoStockInicial"
+                  [class]="campo"
+                  min="0"
+                  step="1"
+                />
+                <p class="mt-1 text-xs text-slate-500">
+                  Si se deja en cero, no habrá unidades disponibles para vender.
+                </p>
+              </div>
+            }
+
+            <div>
+
+              <label
+                class="mb-1.5 block text-sm font-semibold text-slate-700"
+              >
+                URL de imagen
+              </label>
+
+              <input
+                type="url"
+                [(ngModel)]="productoForm.imagenUrl"
+                name="productoImagen"
+                [class]="campo"
+                placeholder="https://..."
+              />
+
+            </div>
+
+            <div
+              class="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end"
+            >
+
+              <button
+                type="button"
+                (click)="cerrarModalProducto()"
+                class="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="submit"
+                [disabled]="guardando()"
+                class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {{
+                  guardando()
+                    ? 'Guardando...'
+                    : (
+                      productoEditando()
+                        ? 'Guardar cambios'
+                        : 'Crear producto'
+                    )
+                }}
+              </button>
+
+            </div>
+
+          </form>
+
+        </div>
+
+      </div>
+
+    }
+
+    <!-- ====================================================== -->
+    <!-- TOASTS -->
+    <!-- ====================================================== -->
+
+    <div
+      class="fixed right-4 top-20 z-[60] flex w-[min(380px,calc(100vw-2rem))] flex-col gap-3"
+    >
+
+      @for (toast of service.toasts(); track toast.id) {
+
+        <div
+          class="rounded-xl border border-slate-200 border-l-4 bg-white p-4 shadow-xl"
+          [class]="toastClase(toast.tipo)"
+        >
+
+          <div class="flex items-start gap-3">
+
+            <div class="min-w-0 flex-1">
+
+              <p class="font-bold text-slate-800">
+                {{ toast.titulo }}
+              </p>
+
+              @if (toast.mensaje) {
+
+                <p class="mt-1 text-sm text-slate-600">
+                  {{ toast.mensaje }}
+                </p>
+
+              }
+
+              <p class="mt-1 text-xs text-slate-400">
+                {{ toast.tiempo }}
+              </p>
+
+            </div>
+
+            <button
+              type="button"
+              (click)="service.dismissToast(toast.id)"
+              class="text-slate-400 hover:text-slate-700"
+            >
+              Cerrar
+            </button>
+
+          </div>
+
+        </div>
+
+      }
+
+    </div>
+
+  

@@ -1,0 +1,27 @@
+ angular.json                                       |    3 [32m+[m[31m-[m
+ package-lock.json                                  | 1333 [32m+++++++++[m[31m-[m
+ package.json                                       |    5 [32m+[m[31m-[m
+ src/app/app.component.ts                           |   18 [32m+[m
+ src/app/app.config.ts                              |   42 [32m+[m[31m-[m
+ src/app/app.html                                   |  341 [31m---[m
+ src/app/app.routes.ts                              |   45 [32m+[m[31m-[m
+ src/app/auth/login/login.component.ts              |  792 [32m++++++[m
+ src/app/auth/registro/registro.component.ts        | 1046 [32m++++++++[m
+ src/app/core/auth/auth.guard.ts                    |   83 [32m+[m
+ src/app/core/auth/token.interceptor.ts             |   52 [32m+[m
+ src/app/core/models/olitrack.models.ts             |  409 [32m+++[m
+ src/app/core/services/auth.service.ts              |  435 [32m++++[m
+ src/app/core/services/olitrack.service.ts          | 1537 [32m+++++++++++[m
+ .../features/admin/admin-dashboard.component.ts    | 2751 [32m++++++++++++++++++++[m
+ src/app/features/client/client-portal.component.ts | 1144 [32m++++++++[m
+ .../features/driver/driver-workspace.component.ts  |  650 [32m+++++[m
+ .../supervisor/supervisor-operations.component.ts  | 1198 [32m+++++++++[m
+ src/app/public/catalogo/catalogo.component.ts      |  119 [32m+[m
+ src/app/public/consulta/consulta.component.ts      |  260 [32m++[m
+ src/app/public/home/home.component.css             |   23 [32m+[m
+ src/app/public/home/home.component.ts              |  266 [32m++[m
+ .../components/map/ayacucho-map.component.ts       |  633 [32m+++++[m
+ .../shared/components/navbar/navbar.component.ts   |  100 [32m+[m
+ src/environments/environment.prod.ts               |   14 [32m+[m
+ src/environments/environment.ts                    |   14 [32m+[m
+ 26 files changed, 12862 insertions(+), 451 deletions(-)

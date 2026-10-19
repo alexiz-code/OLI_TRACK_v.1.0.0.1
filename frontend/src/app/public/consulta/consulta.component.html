@@ -1,0 +1,105 @@
+
+    <div class="contenedor">
+      <h2>Envíanos tu consulta</h2>
+
+      @if (!enviado) {
+        <form
+          [formGroup]="form"
+          (ngSubmit)="enviar()"
+        >
+          <label>
+            Nombre
+
+            <input
+              formControlName="nombre"
+              type="text"
+              placeholder="Ingresa tu nombre"
+            />
+
+            @if (
+              form.controls.nombre.touched &&
+              form.controls.nombre.invalid
+            ) {
+              <small class="error">
+                El nombre es obligatorio.
+              </small>
+            }
+          </label>
+
+          <label>
+            Correo electrónico
+
+            <input
+              formControlName="email"
+              type="email"
+              placeholder="correo@ejemplo.com"
+            />
+
+            @if (
+              form.controls.email.touched &&
+              form.controls.email.invalid
+            ) {
+              <small class="error">
+                Ingresa un correo electrónico válido.
+              </small>
+            }
+          </label>
+
+          <label>
+            Asunto
+
+            <input
+              formControlName="asunto"
+              type="text"
+              placeholder="Asunto de la consulta"
+            />
+
+            @if (
+              form.controls.asunto.touched &&
+              form.controls.asunto.invalid
+            ) {
+              <small class="error">
+                El asunto es obligatorio.
+              </small>
+            }
+          </label>
+
+          <label>
+            Mensaje
+
+            <textarea
+              formControlName="mensaje"
+              rows="5"
+              placeholder="Escribe tu consulta"
+            ></textarea>
+
+            @if (
+              form.controls.mensaje.touched &&
+              form.controls.mensaje.invalid
+            ) {
+              <small class="error">
+                El mensaje es obligatorio y no debe superar los 2000 caracteres.
+              </small>
+            }
+          </label>
+
+          <button
+            type="submit"
+            [disabled]="form.invalid || enviando"
+          >
+            @if (enviando) {
+              Enviando...
+            } @else {
+              Enviar consulta
+            }
+          </button>
+        </form>
+      }
+
+      @if (enviado) {
+        <p class="confirmacion">
+          ¡Gracias! Te responderemos pronto.
+        </p>
+      }
+    </div>
+  

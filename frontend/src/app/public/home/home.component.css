@@ -1,0 +1,23 @@
+:host { display: block; font-family: system-ui, sans-serif; color: #1a2b4c; }
+.navbar { background: #0d1b4c; color: white; position: sticky; top: 0; z-index: 10; }
+.navbar-inner { max-width: 1200px; margin: 0 auto; padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; }
+.logo { font-weight: 700; font-size: 1.25rem; }
+.navbar-links { display: flex; gap: 1.5rem; align-items: center; }
+.navbar-links a { color: white; text-decoration: none; font-size: 0.95rem; }
+.btn-primary, .btn-cta, .btn-outline { padding: 0.6rem 1.4rem; border-radius: 999px; text-decoration: none; font-weight: 600; display: inline-block; }
+.btn-primary { background: #2563eb; color: white; }
+.btn-cta { background: #f59e0b; color: #1a2b4c; font-size: 1.05rem; }
+.btn-outline { border: 2px solid currentColor; }
+.hero { max-width: 1200px; margin: 0 auto; padding: 4rem 1.5rem; display: flex; align-items: center; gap: 3rem; }
+.hero-texto { flex: 1; }
+.hero-texto h1 { font-size: 2.5rem; margin-bottom: 1rem; }
+.hero-texto p { font-size: 1.1rem; color: #475569; margin-bottom: 1.5rem; }
+.hero-imagen { font-size: 8rem; }
+.catalogo-destacado, .cta-consulta { max-width: 1200px; margin: 0 auto; padding: 3rem 1.5rem; text-align: center; }
+.grid-productos { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1.5rem; margin: 2rem 0; }
+.tarjeta-producto { border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; }
+.imagen-producto { font-size: 2.5rem; margin-bottom: 0.5rem; }
+.imagen-producto img { max-width: 100%; border-radius: 8px; }
+.precio { color: #2563eb; font-weight: 700; }
+.cta-consulta { background: #0d1b4c; color: white; border-radius: 16px; margin-bottom: 3rem; }
+.footer { text-align: center; padding: 2rem; color: #64748b; font-size: 0.9rem; }

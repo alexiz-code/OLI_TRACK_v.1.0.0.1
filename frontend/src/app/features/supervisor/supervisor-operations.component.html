@@ -1,0 +1,922 @@
+
+    <app-navbar />
+
+    <div class="max-w-7xl mx-auto p-4 space-y-6">
+
+      <!-- ========================================================= -->
+      <!-- CABECERA -->
+      <!-- ========================================================= -->
+
+      <div
+        class="bg-white p-4 rounded-2xl border border-slate-200
+               shadow-sm flex flex-col sm:flex-row
+               items-start sm:items-center
+               justify-between gap-3"
+      >
+
+        <div>
+
+          <h1
+            class="text-xl font-black text-slate-900
+                   flex items-center gap-2"
+          >
+            Bandeja de Despacho y Supervisión
+
+            <span
+              class="px-2.5 py-0.5 rounded-full
+                     bg-blue-100 text-blue-800
+                     text-xs font-bold"
+            >
+              Supervisor
+            </span>
+          </h1>
+
+          <p class="text-xs text-slate-500">
+            Validación de pedidos, asignación de repartidores
+            y monitoreo en vivo
+          </p>
+
+        </div>
+
+
+        <!-- NAVEGACIÓN -->
+
+        <div class="flex items-center gap-2 flex-wrap">
+
+          <button
+            type="button"
+            (click)="irA('BANDEJA')"
+            [class]="clase('BANDEJA')"
+            class="px-3 py-1.5 rounded-xl text-xs"
+          >
+            Bandeja
+          </button>
+
+
+          <button
+            type="button"
+            (click)="irA('ALERTAS')"
+            [class]="clase('ALERTAS')"
+            class="px-3 py-1.5 rounded-xl text-xs"
+          >
+
+            Alertas
+
+            @if (totalAlertas() > 0) {
+
+              <span
+                class="ml-1 px-1.5 py-0.5 rounded-full
+                       bg-red-500 text-white text-[10px]"
+              >
+                {{ totalAlertas() }}
+              </span>
+
+            }
+
+          </button>
+
+
+          <button
+            type="button"
+            (click)="irA('MAPA')"
+            [class]="clase('MAPA')"
+            class="px-3 py-1.5 rounded-xl text-xs"
+          >
+            Mapa
+          </button>
+
+
+          <button
+            type="button"
+            (click)="irA('REPORTES')"
+            [class]="clase('REPORTES')"
+            class="px-3 py-1.5 rounded-xl text-xs"
+          >
+            Reportes
+          </button>
+
+        </div>
+
+      </div>
+
+
+      <!-- ========================================================= -->
+      <!-- BANDEJA -->
+      <!-- ========================================================= -->
+
+      @if (vista() === 'BANDEJA') {
+
+        <div
+          class="bg-white rounded-2xl border border-slate-200
+                 shadow-sm p-5 space-y-4"
+        >
+
+          <div class="flex items-center justify-between">
+
+            <h2
+              class="font-bold text-sm text-slate-900 uppercase"
+            >
+              Pedidos Recibidos y en Proceso
+            </h2>
+
+
+            <select
+              [(ngModel)]="filtroEstado"
+              (ngModelChange)="cargarBandeja()"
+              class="text-xs border rounded-lg px-2 py-1"
+            >
+
+              <option [ngValue]="undefined">
+                Todos
+              </option>
+
+              @for (e of estadosPedido; track e) {
+
+                <option [ngValue]="e">
+                  {{ e }}
+                </option>
+
+              }
+
+            </select>
+
+          </div>
+
+
+          <!-- PEDIDOS -->
+
+          <div class="space-y-3">
+
+            @for (p of service.pedidos(); track p.id) {
+
+              <div
+                class="p-4 rounded-xl border
+                       border-slate-200 bg-slate-50
+                       space-y-2"
+              >
+
+                <div
+                  class="flex flex-col md:flex-row
+                         items-start md:items-center
+                         justify-between gap-3"
+                >
+
+                  <div class="space-y-1">
+
+                    <div class="flex items-center gap-2">
+
+                      <span
+                        class="font-mono font-bold
+                               text-blue-700 text-xs"
+                      >
+                        #{{ p.id.slice(-6) }}
+                      </span>
+
+
+                      <span
+                        class="px-2 py-0.5 rounded
+                               text-[10px] font-bold
+                               bg-slate-200 text-slate-800"
+                      >
+                        {{ p.estado }}
+                      </span>
+
+
+                      <span
+                        class="text-xs text-slate-400"
+                      >
+                        {{ p.creadoEn | date:'dd/MM HH:mm' }}
+                      </span>
+
+                    </div>
+
+
+                    <p class="text-xs text-slate-600">
+                      Dirección:
+                      {{ p.direccionEntrega }}
+                    </p>
+
+
+                    @if (p.repartidorId) {
+
+                      <p
+                        class="text-xs text-blue-700
+                               font-semibold"
+                      >
+                        Repartidor:
+                        {{ p.repartidorId!.slice(-6) }}
+                      </p>
+
+                    }
+
+                  </div>
+
+
+                  <span
+                    class="text-base font-black
+                           text-slate-900"
+                  >
+                    S/. {{ p.total.toFixed(2) }}
+                  </span>
+
+                </div>
+
+
+                <!-- ACCIONES -->
+
+                <div
+                  class="flex items-center gap-2
+                         flex-wrap pt-2 border-t"
+                >
+
+                  @if (p.estado === 'PENDIENTE') {
+
+                    <button
+                      type="button"
+                      (click)="validar(p.id)"
+                      [disabled]="pedidoEnProceso() === p.id"
+                      class="px-3 py-1.5
+                             bg-blue-600 hover:bg-blue-700
+                             text-white rounded-xl
+                             text-xs font-bold"
+                    >
+                      Validar
+                    </button>
+
+                  }
+
+
+                  @if (
+                    p.estado === 'PENDIENTE' ||
+                    p.estado === 'CONFIRMADO'
+                  ) {
+
+                    <button
+                      type="button"
+                      (click)="abrirRechazo(p)"
+                      [disabled]="pedidoEnProceso() === p.id"
+                      class="px-3 py-1.5
+                             bg-red-100 hover:bg-red-200
+                             text-red-700 rounded-xl
+                             text-xs font-bold"
+                    >
+                      Rechazar
+                    </button>
+
+                  }
+
+
+                  @if (
+                    (
+                      p.estado === 'PENDIENTE' ||
+                      p.estado === 'CONFIRMADO' ||
+                      p.estado === 'EN_PREPARACION'
+                    ) &&
+                    !p.repartidorId
+                  ) {
+
+                    <button
+                      type="button"
+                      (click)="abrirReasignacion(p)"
+                      class="px-3 py-1.5
+                             bg-amber-600 hover:bg-amber-700
+                             text-white rounded-xl
+                             text-xs font-bold"
+                    >
+                      Elegir Repartidor
+                    </button>
+
+                    <button
+                      type="button"
+                      (click)="asignarAutomatico(p.id)"
+                      [disabled]="pedidoEnProceso() === p.id"
+                      class="px-3 py-1.5
+                             bg-blue-600 hover:bg-blue-700
+                             text-white rounded-xl
+                             text-xs font-bold"
+                    >
+                      Asignar automáticamente
+                    </button>
+
+                  }
+
+
+                  @if (
+                    p.repartidorId &&
+                    p.estado !== 'ENTREGADO' &&
+                    p.estado !== 'CANCELADO'
+                  ) {
+
+                    <button
+                      type="button"
+                      (click)="abrirReasignacion(p)"
+                      class="px-3 py-1.5
+                             bg-blue-100 hover:bg-blue-200
+                             text-blue-700 rounded-xl
+                             text-xs font-bold"
+                    >
+                      Reasignar
+                    </button>
+
+                  }
+
+                </div>
+
+              </div>
+
+            } @empty {
+
+              <p class="text-xs text-slate-400">
+                No hay pedidos con ese filtro.
+              </p>
+
+            }
+
+          </div>
+
+        </div>
+
+      }
+
+
+      <!-- ========================================================= -->
+      <!-- ALERTAS -->
+      <!-- ========================================================= -->
+
+      @if (vista() === 'ALERTAS') {
+
+        <div
+          class="grid grid-cols-1 md:grid-cols-2 gap-4"
+        >
+
+          <!-- RETRASADOS -->
+
+          <div
+            class="bg-white rounded-2xl
+                   border border-slate-200
+                   shadow-sm p-5 space-y-3"
+          >
+
+            <h3
+              class="font-bold text-sm text-red-700"
+            >
+              Pedidos retrasados
+            </h3>
+
+
+            @for (
+              p of pedidosRetrasados;
+              track p.id
+            ) {
+
+              <div
+                class="p-3 rounded-xl border
+                       border-red-200 bg-red-50
+                       text-xs"
+              >
+
+                <span class="font-mono font-bold">
+                  #{{ p.id.slice(-6) }}
+                </span>
+
+                —
+                {{ p.estado }}
+                ·
+                {{ p.direccionEntrega }}
+
+              </div>
+
+            } @empty {
+
+              <p class="text-xs text-slate-400">
+                Sin retrasos por ahora.
+              </p>
+
+            }
+
+          </div>
+
+
+          <!-- SIN ASIGNAR -->
+
+          <div
+            class="bg-white rounded-2xl
+                   border border-slate-200
+                   shadow-sm p-5 space-y-3"
+          >
+
+            <h3
+              class="font-bold text-sm text-amber-700"
+            >
+              Pedidos sin asignar
+            </h3>
+
+
+            @for (
+              p of pedidosSinAsignar;
+              track p.id
+            ) {
+
+              <div
+                class="p-3 rounded-xl border
+                       border-amber-200
+                       bg-amber-50 text-xs
+                       flex items-center
+                       justify-between"
+              >
+
+                <span>
+
+                  <span class="font-mono font-bold">
+                    #{{ p.id.slice(-6) }}
+                  </span>
+
+                  —
+                  {{ p.direccionEntrega }}
+
+                </span>
+
+
+                <button
+                  type="button"
+                  (click)="asignarAutomatico(p.id)"
+                  class="px-2 py-1
+                         bg-amber-600
+                         text-white rounded-lg
+                         text-[11px] font-bold"
+                >
+                  Asignar
+                </button>
+
+              </div>
+
+            } @empty {
+
+              <p class="text-xs text-slate-400">
+                Todos los pedidos activos tienen repartidor.
+              </p>
+
+            }
+
+          </div>
+
+        </div>
+
+      }
+
+
+      <!-- ========================================================= -->
+      <!-- MAPA -->
+      <!-- ========================================================= -->
+
+      @if (vista() === 'MAPA') {
+
+        <div
+          class="bg-white p-3 rounded-2xl
+                 border border-slate-200
+                 shadow-sm"
+        >
+
+          <app-ayacucho-map
+            [companyConfig]="service.companyConfigDisplay()"
+            [repartidores]="service.repartidores()"
+            [clientes]="service.clientes()"
+            [pedidos]="service.pedidos()"
+            height="600px"
+          />
+
+        </div>
+
+      }
+
+
+      <!-- ========================================================= -->
+      <!-- REPORTES -->
+      <!-- ========================================================= -->
+
+      @if (vista() === 'REPORTES') {
+
+        <div class="space-y-4">
+
+          <app-incidencias-charts
+            [incidencias]="service.incidencias()"
+            [repartidores]="service.repartidores()"
+          />
+
+          @if (service.dashboard(); as d) {
+
+            <div
+              class="grid grid-cols-1
+                     sm:grid-cols-4 gap-3"
+            >
+
+              <!-- TOTAL -->
+
+              <div
+                class="bg-white p-4 rounded-2xl
+                       border border-slate-200"
+              >
+
+                <p
+                  class="text-xs font-bold
+                         text-slate-500 uppercase"
+                >
+                  Pedidos Totales
+                </p>
+
+                <p
+                  class="text-2xl font-black
+                         text-slate-900 mt-1"
+                >
+                  {{ d.pedidosTotales }}
+                </p>
+
+              </div>
+
+
+              <!-- DEMORAS -->
+
+              <div
+                class="bg-white p-4 rounded-2xl
+                       border border-slate-200"
+              >
+
+                <p
+                  class="text-xs font-bold
+                         text-slate-500 uppercase"
+                >
+                  Con Demora
+                </p>
+
+                <p
+                  class="text-2xl font-black
+                         text-red-600 mt-1"
+                >
+                  {{ d.pedidosConDemora }}
+                </p>
+
+              </div>
+
+
+              <!-- TIEMPO -->
+
+              <div
+                class="bg-white p-4 rounded-2xl
+                       border border-slate-200"
+              >
+
+                <p
+                  class="text-xs font-bold
+                         text-slate-500 uppercase"
+                >
+                  Tiempo de Envío Promedio
+                </p>
+                <p class="mt-1 text-[11px] text-slate-400">
+                  Desde salida a ruta hasta llegada; pedidos sin salida registrada no se promedian.
+                </p>
+
+                <p
+                  class="text-2xl font-black
+                         text-blue-700 mt-1"
+                >
+                  {{ d.tiempoPromedioMinutos.toFixed(0) }}
+                  min
+                </p>
+
+              </div>
+
+
+              <!-- ENTREGADOS -->
+
+              <div
+                class="bg-white p-4 rounded-2xl
+                       border border-slate-200"
+              >
+
+                <p
+                  class="text-xs font-bold
+                         text-slate-500 uppercase"
+                >
+                  Entregados
+                </p>
+
+                <p
+                  class="text-2xl font-black
+                         text-emerald-700 mt-1"
+                >
+                  {{ d.pedidosEntregados }}
+                </p>
+
+              </div>
+
+            </div>
+
+          }
+
+
+          <!-- PRODUCTIVIDAD -->
+
+          <div
+            class="bg-white rounded-2xl
+                   border border-slate-200
+                   shadow-sm p-5"
+          >
+
+            <h3
+              class="font-bold text-sm
+                     text-slate-900 mb-3"
+            >
+              Productividad por Repartidor
+            </h3>
+
+
+            <div class="overflow-x-auto">
+
+              <table
+                class="w-full text-left text-xs"
+              >
+
+                <thead
+                  class="text-slate-500
+                         uppercase text-[11px]
+                         border-b"
+                >
+
+                  <tr>
+
+                    <th class="py-2">
+                      Repartidor
+                    </th>
+
+                    <th class="py-2">
+                      Asignados
+                    </th>
+
+                    <th class="py-2">
+                      Entregados
+                    </th>
+
+                    <th class="py-2">
+                      Fallidas
+                    </th>
+
+                    <th class="py-2">
+                      Incidencias
+                    </th>
+
+                    <th class="py-2">
+                      Prom. ruta (min)
+                    </th>
+
+                  </tr>
+
+                </thead>
+
+
+                <tbody
+                  class="divide-y
+                         divide-slate-100"
+                >
+
+                  @for (
+                    r of service.productividad();
+                    track r.repartidorId
+                  ) {
+
+                    <tr>
+
+                      <td class="py-2 font-mono">
+                        {{ r.repartidorId.slice(-6) }}
+                      </td>
+
+                      <td class="py-2">
+                        {{ r.pedidosAsignados }}
+                      </td>
+
+                      <td class="py-2">
+                        {{ r.pedidosEntregados }}
+                      </td>
+
+                      <td class="py-2">
+                        {{ r.entregasFallidas }}
+                      </td>
+
+                      <td class="py-2">
+                        {{ r.incidencias }}
+                      </td>
+
+                      <td class="py-2">
+                        {{ r.tiempoPromedioMinutos.toFixed(0) }}
+                      </td>
+
+                    </tr>
+
+                  } @empty {
+
+                    <tr>
+
+                      <td
+                        colspan="6"
+                        class="py-4 text-center
+                               text-slate-400"
+                      >
+                        No hay información de productividad.
+                      </td>
+
+                    </tr>
+
+                  }
+
+                </tbody>
+
+              </table>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      }
+
+
+      <!-- ========================================================= -->
+      <!-- MODAL RECHAZO -->
+      <!-- ========================================================= -->
+
+      @if (pedidoRechazo(); as pedido) {
+
+        <div
+          class="fixed inset-0 z-50
+                 flex items-center justify-center
+                 p-4 bg-slate-900/60"
+        >
+
+          <div
+            class="bg-white rounded-2xl
+                   max-w-md w-full
+                   p-6 space-y-3"
+          >
+
+            <h3
+              class="font-black text-slate-900"
+            >
+              Rechazar pedido
+              #{{ pedido.id.slice(-6) }}
+            </h3>
+
+
+            <textarea
+              [(ngModel)]="observacionesRechazo"
+              rows="3"
+              placeholder="Motivo del rechazo"
+              class="w-full border
+                     rounded-xl px-3 py-2
+                     text-xs"
+            ></textarea>
+
+
+            <div class="flex justify-end gap-2">
+
+              <button
+                type="button"
+                (click)="pedidoRechazo.set(null)"
+                class="px-3 py-2
+                       text-slate-600
+                       text-xs font-bold"
+              >
+                Cancelar
+              </button>
+
+
+              <button
+                type="button"
+                (click)="confirmarRechazo()"
+                [disabled]="!observacionesRechazo.trim() || pedidoEnProceso() === pedido.id"
+                class="px-4 py-2 bg-red-600
+                       text-white rounded-xl
+                       text-xs font-bold
+                       disabled:opacity-50"
+              >
+                Rechazar
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      }
+
+
+      <!-- ========================================================= -->
+      <!-- MODAL REASIGNACIÓN -->
+      <!-- ========================================================= -->
+
+      @if (pedidoReasignar(); as pedido) {
+
+        <div
+          class="fixed inset-0 z-50
+                 flex items-center justify-center
+                 p-4 bg-slate-900/60"
+        >
+
+          <div
+            class="bg-white rounded-2xl
+                   max-w-md w-full
+                   p-6 space-y-3"
+          >
+
+            <h3
+              class="font-black text-slate-900"
+            >
+              {{ pedido.repartidorId ? 'Reasignar pedido' : 'Asignar repartidor' }}
+              #{{ pedido.id.slice(-6) }}
+            </h3>
+
+            @if (service.repartidores().length === 0) {
+              <div class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                <p class="font-bold">No hay repartidores activos sin entregas en curso.</p>
+                <p class="mt-1">
+                  La asignación manual no requiere GPS. La automática solo considera repartidores disponibles con ubicación GPS.
+                </p>
+                <button
+                  type="button"
+                  (click)="recargarRepartidoresDisponibles()"
+                  class="mt-2 rounded-lg bg-amber-700 px-3 py-1.5 font-bold text-white hover:bg-amber-800"
+                >
+                  Actualizar lista
+                </button>
+              </div>
+            }
+
+            <select
+              [(ngModel)]="nuevoRepartidorId"
+              [disabled]="service.repartidores().length === 0"
+              class="w-full border
+                     rounded-xl px-3 py-2
+                     text-xs"
+            >
+
+              <option value="">
+                Selecciona un repartidor
+              </option>
+
+
+              @for (
+                r of service.repartidores();
+                track r.id
+              ) {
+
+                <option [value]="r.id">
+
+                  {{ r.nombreUsuario || 'Repartidor' }} — {{ r.placaVehiculo }}
+                  @if (r.emailUsuario) {
+                    ({{ r.emailUsuario }})
+                  }
+                  ({{ r.estado }})
+
+                </option>
+
+              }
+
+            </select>
+
+
+            <div class="flex justify-end gap-2">
+
+              <button
+                type="button"
+                (click)="pedidoReasignar.set(null)"
+                class="px-3 py-2
+                       text-slate-600
+                       text-xs font-bold"
+              >
+                Cancelar
+              </button>
+
+
+              <button
+                type="button"
+                (click)="confirmarReasignacion()"
+                [disabled]="!nuevoRepartidorId || pedidoEnProceso() === pedido.id"
+                class="px-4 py-2
+                       bg-blue-600
+                       text-white rounded-xl
+                       text-xs font-bold
+                       disabled:opacity-50"
+              >
+                {{ pedido.repartidorId ? 'Reasignar' : 'Asignar' }}
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      }
+
+    </div>
+  
