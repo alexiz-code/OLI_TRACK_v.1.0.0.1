@@ -17,44 +17,12 @@ import {
   FormsModule
 } from '@angular/forms';
 
-import {
-  NavbarComponent
-} from '../../shared/components/navbar/navbar.component';
+import {  NavbarComponent} from '../../shared/components/navbar/navbar.component';
+import {  AyacuchoMapComponent} from '../../shared/components/map/ayacucho-map.component';
+import {  IncidenciasChartsComponent} from '../../shared/components/incidencias-charts.component';
+import {  OlitrackService, ProductoRequest} from '../../core/services/olitrack.service';
+import {  Cliente, MovimientoRequest, Producto, Repartidor, Rol, Usuario} from '../../core/models/olitrack.models';
 
-import {
-  AyacuchoMapComponent
-} from '../../shared/components/map/ayacucho-map.component';
-
-import {
-  IncidenciasChartsComponent
-} from '../../shared/components/incidencias-charts.component';
-
-import {
-  OlitrackService
-} from '../../core/services/olitrack.service';
-
-import type { ProductoRequest } from '../../core/models/producto.models';
-
-import {
-  ProductoForm,
-  PRODUCTO_VACIO,
-  UsuarioEdicionForm,
-  UsuarioForm,
-  USUARIO_VACIO
-} from './models/admin.forms';
-
-import {
-  Cliente,
-  MovimientoRequest,
-  Producto,
-  Repartidor,
-  Rol,
-  Usuario
-} from '../../core/models/olitrack.models';
-
-// ============================================================
-// TIPOS LOCALES
-// ============================================================
 
 type Tab =
   | 'MAPA_GPS'
@@ -62,6 +30,53 @@ type Tab =
   | 'USUARIOS'
   | 'CATALOGO'
   | 'REPORTES';
+
+interface ProductoForm {
+  nombre: string;
+  descripcion: string;
+  categoria: string;
+  precioUnitario: number;
+  unidadMedida: string;
+  imagenUrl: string;
+  stockInicial: number;
+}
+
+interface UsuarioForm {
+  nombre: string;
+  email: string;
+  password: string;
+  telefono: string;
+  rol: Rol;
+  placaVehiculo: string;
+}
+
+interface UsuarioEdicionForm {
+  nombre: string;
+  telefono: string;
+}
+
+// ============================================================
+// VALORES INICIALES
+// ============================================================
+
+const USUARIO_VACIO = (): UsuarioForm => ({
+  nombre: '',
+  email: '',
+  password: '',
+  telefono: '',
+  rol: 'CLIENTE',
+  placaVehiculo: ''
+});
+
+const PRODUCTO_VACIO = (): ProductoForm => ({
+  nombre: '',
+  descripcion: '',
+  categoria: '',
+  precioUnitario: 0,
+  unidadMedida: '',
+  imagenUrl: '',
+  stockInicial: 0
+});
 
 // ============================================================
 // CLASES VISUALES
@@ -177,8 +192,6 @@ export class AdminDashboardComponent {
   readonly cargando = signal(false);
 
   readonly guardando = signal(false);
-
-  private pollingRepartidoresActivo = true;
 
   readonly usuariosPorCargo = computed(() =>
     this.roles.map(rol => ({
@@ -358,27 +371,12 @@ export class AdminDashboardComponent {
 
           if (
             this.tab() === 'MAPA_GPS' &&
-            this.pollingRepartidoresActivo &&
             !document.hidden
           ) {
 
             this.service
               .reloadRepartidores()
-              .catch(error => {
-                this.pollingRepartidoresActivo = false;
-                console.error(
-                  '[AdminDashboard] Falló la actualización automática de repartidores:',
-                  error
-                );
-                this.service.triggerToast(
-                  'ERROR',
-                  'No se pudo actualizar el mapa',
-                  this.service.mensajeError(
-                    error,
-                    'La actualización automática se detuvo. Usa “Recargar” para reintentar.'
-                  )
-                );
-              });
+              .catch(() => undefined);
 
           }
 
@@ -470,7 +468,6 @@ export class AdminDashboardComponent {
 
   async recargarTodo(): Promise<void> {
 
-    this.pollingRepartidoresActivo = true;
     await this.cargarDatos();
 
   }
