@@ -6,6 +6,7 @@ import { OlitrackService } from '../../core/services/olitrack.service';
 import { NavbarComponent } from '../../shared/components/navbar/navbar.component';
 import { AyacuchoMapComponent } from '../../shared/components/map/ayacucho-map.component';
 import { IncidenciasChartsComponent } from '../../shared/components/incidencias-charts.component';
+import { PedidoEvidenciaComponent } from '../../shared/components/pedido-evidencia.component';
 
 import {
   EstadoPedido,
@@ -26,7 +27,8 @@ type Vista =
     DatePipe,
     NavbarComponent,
     AyacuchoMapComponent,
-    IncidenciasChartsComponent
+    IncidenciasChartsComponent,
+    PedidoEvidenciaComponent
   ],
   templateUrl: './supervisor-operations.component.html'
 })

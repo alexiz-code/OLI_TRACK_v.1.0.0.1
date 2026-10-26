@@ -14,6 +14,7 @@ import { catchError, of } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { AuthService } from '../../core/services/auth.service';
+import { OlitrackService } from '../../core/services/olitrack.service';
 import { Producto, Usuario } from '../../core/models/olitrack.models';
 import { environment } from '../../../environments/environment';
 
@@ -29,6 +30,7 @@ import { environment } from '../../../environments/environment';
 export class HomeComponent {
 
   readonly authService = inject(AuthService);
+  readonly service = inject(OlitrackService);
 
   private readonly http = inject(HttpClient);
   private readonly destroyRef = inject(DestroyRef);

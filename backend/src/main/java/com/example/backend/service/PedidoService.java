@@ -30,6 +30,7 @@ import com.example.backend.repository.RepartidorRepository;
 import com.example.backend.security.SecurityContextUtils;
 import com.example.backend.security.UsuarioAutenticado;
 import com.google.cloud.storage.Blob;
+import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
 import org.slf4j.Logger;
@@ -63,13 +64,18 @@ import java.text.Normalizer;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.net.URLEncoder;
+import java.net.URI;
+import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 
 @Service
 public class PedidoService {
     private static final Logger log = LoggerFactory.getLogger(PedidoService.class);
     private static final ZoneId ZONA_LIMA = ZoneId.of("America/Lima");
+    private static final int EVIDENCIA_MAX_BYTES = 2 * 1024 * 1024;
+    private static final List<String> TIPOS_EVIDENCIA_PERMITIDOS =
+            List.of("image/jpeg", "image/png", "image/webp", "application/pdf");
 
     private final PedidoRepository pedidoRepository;
     private final DetallePedidoRepository detallePedidoRepository;
@@ -1063,14 +1069,16 @@ public class PedidoService {
                                                      byte[] contenido,
                                                      String contentType,
                                                      String nombreArchivo) {
-        if (contenido == null || contenido.length == 0 || contenido.length > 2 * 1024 * 1024) {
+        if (contenido == null || contenido.length == 0 || contenido.length > EVIDENCIA_MAX_BYTES) {
             return Mono.error(new OperacionInvalidaException(
                     "El comprobante debe tener contenido y no superar 2 MB"));
         }
-        List<String> tiposPermitidos = List.of("image/jpeg", "image/png", "image/webp", "application/pdf");
-        if (!tiposPermitidos.contains(contentType)) {
+        String tipoDetectado = detectarTipoEvidencia(contenido);
+        if (tipoDetectado == null
+                || !TIPOS_EVIDENCIA_PERMITIDOS.contains(contentType)
+                || !tipoDetectado.equals(contentType)) {
             return Mono.error(new OperacionInvalidaException(
-                    "El comprobante debe ser JPG, PNG, WEBP o PDF"));
+                    "El comprobante debe ser un JPG, PNG, WEBP o PDF válido"));
         }
         return buscar(pedidoId)
                 .flatMap(pedido -> verificarPropietario(pedido, uidSolicitante)
@@ -1084,43 +1092,213 @@ public class PedidoService {
                             return subirArchivo(
                                     pedidoId,
                                     contenido,
-                                    contentType,
+                                    tipoDetectado,
                                     nombreArchivo
-                            ).flatMap(url -> {
-                                pedido.setEvidenciaUrl(url);
-                                return pedidoRepository.save(pedido);
+                            ).flatMap(ruta -> {
+                                pedido.setEvidenciaStoragePath(ruta);
+                                pedido.setEvidenciaUrl(
+                                        "/api/pedidos/" + pedidoId + "/evidencia/archivo");
+                                pedido.setEvidenciaContentType(tipoDetectado);
+                                pedido.setEvidenciaNombreArchivo(
+                                        nombreSeguro(nombreArchivo));
+                                pedido.setEvidenciaTamanoBytes((long) contenido.length);
+                                pedido.setEvidenciaSubidaEn(new Date());
+                                return pedidoRepository.save(pedido).onErrorResume(error ->
+                                        Mono.fromCallable(() -> storage.delete(storageBucketName, ruta))
+                                                .subscribeOn(Schedulers.boundedElastic())
+                                                .then(Mono.error(error)));
                             });
                         })))
                 .flatMap(this::enriquecer);
+    }
+
+    public Mono<EvidenciaArchivo> descargarEvidencia(String pedidoId,
+                                                     String uidSolicitante,
+                                                     Rol rolSolicitante) {
+        return buscar(pedidoId)
+                .flatMap(pedido -> {
+                    Mono<Void> autorizacion = rolSolicitante == Rol.CLIENTE
+                            ? verificarPropietario(pedido, uidSolicitante)
+                            : (rolSolicitante == Rol.ADMINISTRADOR || rolSolicitante == Rol.SUPERVISOR)
+                                    ? Mono.empty()
+                                    : Mono.error(new ApiException(
+                                            HttpStatus.FORBIDDEN,
+                                            "No tiene permiso para ver este comprobante"));
+
+                    return autorizacion.then(Mono.defer(() -> {
+                        String ruta = pedido.getEvidenciaStoragePath();
+                        boolean esLegado = !StringUtils.hasText(ruta);
+                        if (esLegado) {
+                            ruta = extraerRutaStorageLegada(pedido.getEvidenciaUrl());
+                        }
+                        if (!StringUtils.hasText(ruta)) {
+                            return Mono.error(new RecursoNoEncontradoException(
+                                    "El pedido no tiene un comprobante disponible"));
+                        }
+
+                        String rutaFinal = ruta;
+                        return Mono.fromCallable(() -> {
+                            Blob blob = storage.get(BlobId.of(storageBucketName, rutaFinal));
+                            if (blob == null) {
+                                throw new RecursoNoEncontradoException(
+                                        "No se encontró el comprobante en Firebase Storage");
+                            }
+                            byte[] bytes = storage.readAllBytes(blob.getBlobId());
+                            String contentType = StringUtils.hasText(blob.getContentType())
+                                    ? blob.getContentType()
+                                    : detectarTipoEvidencia(bytes);
+                            if (!StringUtils.hasText(contentType)) {
+                                contentType = "application/octet-stream";
+                            }
+                            String nombreArchivo = StringUtils.hasText(
+                                    pedido.getEvidenciaNombreArchivo())
+                                    ? pedido.getEvidenciaNombreArchivo()
+                                    : nombreSeguro(blob.getName());
+                            return new EvidenciaLeida(
+                                    new EvidenciaArchivo(
+                                            bytes,
+                                            contentType,
+                                            nombreSeguro(nombreArchivo)),
+                                    blob,
+                                    rutaFinal,
+                                    esLegado);
+                        }).subscribeOn(Schedulers.boundedElastic())
+                                .flatMap(evidencia -> {
+                                    if (!evidencia.esLegado()) {
+                                        return Mono.just(evidencia.archivo());
+                                    }
+                                    return Mono.fromCallable(() -> {
+                                                revocarTokenDescarga(evidencia.blob());
+                                                return true;
+                                            })
+                                            .subscribeOn(Schedulers.boundedElastic())
+                                            .then(Mono.defer(() -> {
+                                                pedido.setEvidenciaStoragePath(evidencia.ruta());
+                                                pedido.setEvidenciaContentType(
+                                                        evidencia.archivo().contentType());
+                                                pedido.setEvidenciaNombreArchivo(
+                                                        evidencia.archivo().nombreArchivo());
+                                                pedido.setEvidenciaTamanoBytes(
+                                                        (long) evidencia.archivo().contenido().length);
+                                                if (pedido.getEvidenciaSubidaEn() == null) {
+                                                    pedido.setEvidenciaSubidaEn(new Date());
+                                                }
+                                                pedido.setEvidenciaUrl(
+                                                        "/api/pedidos/" + pedido.getId()
+                                                                + "/evidencia/archivo");
+                                                return pedidoRepository.save(pedido)
+                                                        .thenReturn(evidencia.archivo());
+                                            }));
+                                });
+                    }));
+                });
     }
 
     private Mono<String> subirArchivo(String pedidoId,
                                       byte[] contenido,
                                       String contentType,
                                       String nombreArchivo) {
-        String nombreSeguro = StringUtils.hasText(nombreArchivo)
-                ? nombreArchivo.replace('\\', '/').replaceAll("^.*/", "")
-                        .replaceAll("[^A-Za-z0-9._-]", "_")
-                : "comprobante";
-        if (nombreSeguro.length() > 100) {
-            nombreSeguro = nombreSeguro.substring(nombreSeguro.length() - 100);
-        }
-        String ruta = "evidencias/" + pedidoId + "/" + UUID.randomUUID() + "-" + nombreSeguro;
-        String tokenDescarga = UUID.randomUUID().toString();
-
+        String nombre = nombreSeguro(nombreArchivo);
+        String ruta = "evidencias/" + pedidoId + "/" + UUID.randomUUID() + "-" + nombre;
         return Mono.fromCallable(() -> {
             BlobInfo info = BlobInfo.newBuilder(storageBucketName, ruta)
                     .setContentType(contentType)
-                    .setMetadata(java.util.Map.of("firebaseStorageDownloadTokens", tokenDescarga))
                     .build();
             Blob blob = storage.create(info, contenido);
             if (blob == null) {
                 throw new IllegalStateException("No se pudo guardar el comprobante");
             }
-            String objetoCodificado = URLEncoder.encode(ruta, StandardCharsets.UTF_8).replace("+", "%20");
-            return "https://firebasestorage.googleapis.com/v0/b/" + storageBucketName
-                    + "/o/" + objetoCodificado + "?alt=media&token=" + tokenDescarga;
+            return ruta;
         }).subscribeOn(Schedulers.boundedElastic());
+    }
+
+    private static String detectarTipoEvidencia(byte[] bytes) {
+        if (bytes.length >= 3
+                && (bytes[0] & 0xFF) == 0xFF
+                && (bytes[1] & 0xFF) == 0xD8
+                && (bytes[2] & 0xFF) == 0xFF) {
+            return "image/jpeg";
+        }
+        if (bytes.length >= 8
+                && (bytes[0] & 0xFF) == 0x89
+                && bytes[1] == 0x50
+                && bytes[2] == 0x4E
+                && bytes[3] == 0x47
+                && bytes[4] == 0x0D
+                && bytes[5] == 0x0A
+                && bytes[6] == 0x1A
+                && bytes[7] == 0x0A) {
+            return "image/png";
+        }
+        if (bytes.length >= 12
+                && bytes[0] == 0x52
+                && bytes[1] == 0x49
+                && bytes[2] == 0x46
+                && bytes[3] == 0x46
+                && bytes[8] == 0x57
+                && bytes[9] == 0x45
+                && bytes[10] == 0x42
+                && bytes[11] == 0x50) {
+            return "image/webp";
+        }
+        if (bytes.length >= 5
+                && bytes[0] == 0x25
+                && bytes[1] == 0x50
+                && bytes[2] == 0x44
+                && bytes[3] == 0x46
+                && bytes[4] == 0x2D) {
+            return "application/pdf";
+        }
+        return null;
+    }
+
+    private static String nombreSeguro(String nombreArchivo) {
+        String nombre = StringUtils.hasText(nombreArchivo)
+                ? nombreArchivo.replace('\\', '/').replaceAll("^.*/", "")
+                        .replaceAll("[^A-Za-z0-9._-]", "_")
+                : "comprobante";
+        return nombre.length() > 100 ? nombre.substring(nombre.length() - 100) : nombre;
+    }
+
+    private static String extraerRutaStorageLegada(String evidenciaUrl) {
+        if (!StringUtils.hasText(evidenciaUrl)) {
+            return null;
+        }
+        try {
+            String rawPath = URI.create(evidenciaUrl).getRawPath();
+            int objectStart = rawPath.indexOf("/o/");
+            if (objectStart < 0) {
+                return null;
+            }
+            return URLDecoder.decode(
+                    rawPath.substring(objectStart + 3),
+                    StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException error) {
+            return null;
+        }
+    }
+
+    private void revocarTokenDescarga(Blob blob) {
+        Map<String, String> metadata = new HashMap<>(
+                blob.getMetadata() == null ? Map.of() : blob.getMetadata());
+        metadata.remove("firebaseStorageDownloadTokens");
+        storage.update(BlobInfo.newBuilder(blob.getBlobId())
+                .setContentType(blob.getContentType())
+                .setMetadata(metadata)
+                .build());
+    }
+
+    public record EvidenciaArchivo(
+            byte[] contenido,
+            String contentType,
+            String nombreArchivo) {
+    }
+
+    private record EvidenciaLeida(
+            EvidenciaArchivo archivo,
+            Blob blob,
+            String ruta,
+            boolean esLegado) {
     }
 
     private Mono<Void> verificarPropietario(Pedido pedido, String uidSolicitante) {

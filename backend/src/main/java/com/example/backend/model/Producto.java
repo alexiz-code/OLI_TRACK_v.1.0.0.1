@@ -26,6 +26,8 @@ public class Producto implements EntidadFirestore {
     private BigDecimal precioUnitario;
     private String unidadMedida;
     private String imagenUrl;
+    /** Ruta privada del objeto en Firebase Storage; imagenUrl es la ruta pública de la API. */
+    private String imagenStoragePath;
     private boolean activo = true;
 
     @ServerTimestamp

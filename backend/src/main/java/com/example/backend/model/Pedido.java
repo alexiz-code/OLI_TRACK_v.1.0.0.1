@@ -45,6 +45,17 @@ public class Pedido implements EntidadFirestore {
     /** Se llena solo si metodoPago != EFECTIVO (comprobante de Yape/Plin/Tarjeta). */
     private String evidenciaUrl;
 
+    /** Ruta privada del objeto en Firebase Storage; no es una URL pública. */
+    private String evidenciaStoragePath;
+
+    private String evidenciaContentType;
+
+    private String evidenciaNombreArchivo;
+
+    private Long evidenciaTamanoBytes;
+
+    private Date evidenciaSubidaEn;
+
     /** Se llena solo después de que el pedido llega a ENTREGADO. */
     private Calificacion calificacion;
 

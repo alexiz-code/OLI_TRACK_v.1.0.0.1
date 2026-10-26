@@ -229,6 +229,13 @@
                          flex-wrap pt-2 border-t"
                 >
 
+                  @if (p.evidenciaUrl) {
+                    <app-pedido-evidencia
+                      [pedidoId]="p.id"
+                      [evidenciaUrl]="p.evidenciaUrl"
+                    />
+                  }
+
                   @if (p.estado === 'PENDIENTE') {
 
                     <button

@@ -20,6 +20,7 @@ import {
 import {  NavbarComponent} from '../../shared/components/navbar/navbar.component';
 import {  AyacuchoMapComponent} from '../../shared/components/map/ayacucho-map.component';
 import {  IncidenciasChartsComponent} from '../../shared/components/incidencias-charts.component';
+import { PedidoEvidenciaComponent } from '../../shared/components/pedido-evidencia.component';
 import {  OlitrackService, ProductoRequest} from '../../core/services/olitrack.service';
 import {  Cliente, MovimientoRequest, Producto, Repartidor, Rol, Usuario} from '../../core/models/olitrack.models';
 
@@ -117,7 +118,8 @@ const CAMPO =
     DatePipe,
     NavbarComponent,
     AyacuchoMapComponent,
-    IncidenciasChartsComponent
+    IncidenciasChartsComponent,
+    PedidoEvidenciaComponent
   ],
 
   templateUrl: './admin-dashboard.component.html'
@@ -258,6 +260,10 @@ export class AdminDashboardComponent {
   readonly productoEditando =
     signal<Producto | null>(null);
 
+  readonly productoImagenPreview = signal<string | null>(null);
+  productoImagenSeleccionada: File | null = null;
+  eliminarImagenSeleccionada = false;
+
   productoForm: ProductoForm =
     PRODUCTO_VACIO();
 
@@ -357,6 +363,8 @@ export class AdminDashboardComponent {
   // ============================================================
 
   constructor() {
+
+    this.destroyRef.onDestroy(() => this.limpiarVistaPreviaImagen());
 
     /*
      * La carga inicial se ejecuta solamente en navegador.
@@ -1044,6 +1052,7 @@ export class AdminDashboardComponent {
 
   abrirNuevoProducto(): void {
 
+    this.limpiarImagenProductoSeleccionada();
     this.productoEditando.set(
       null
     );
@@ -1061,6 +1070,8 @@ export class AdminDashboardComponent {
     producto: Producto
   ): void {
 
+    this.limpiarImagenProductoSeleccionada();
+    this.eliminarImagenSeleccionada = false;
     this.productoEditando.set(
       producto
     );
@@ -1101,6 +1112,8 @@ export class AdminDashboardComponent {
       return;
     }
 
+    this.limpiarImagenProductoSeleccionada();
+    this.eliminarImagenSeleccionada = false;
     this.mostrarModalProducto.set(
       false
     );
@@ -1112,6 +1125,58 @@ export class AdminDashboardComponent {
     this.productoForm =
       PRODUCTO_VACIO();
 
+  }
+
+  seleccionarImagenProducto(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const archivo = input.files?.[0] ?? null;
+    if (!archivo) {
+      return;
+    }
+
+    const tiposPermitidos = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!tiposPermitidos.includes(archivo.type)) {
+      this.service.triggerToast(
+        'WARNING',
+        'Formato no permitido',
+        'Selecciona una imagen JPG, PNG o WEBP.'
+      );
+      input.value = '';
+      return;
+    }
+
+    if (archivo.size === 0 || archivo.size > 5 * 1024 * 1024) {
+      this.service.triggerToast(
+        'WARNING',
+        'Tamaño de imagen inválido',
+        'La imagen debe tener contenido y no superar 5 MB.'
+      );
+      input.value = '';
+      return;
+    }
+
+    this.limpiarVistaPreviaImagen();
+    this.productoImagenSeleccionada = archivo;
+    this.productoImagenPreview.set(URL.createObjectURL(archivo));
+    this.eliminarImagenSeleccionada = false;
+  }
+
+  marcarQuitarImagenProducto(): void {
+    this.limpiarImagenProductoSeleccionada();
+    this.eliminarImagenSeleccionada = true;
+  }
+
+  private limpiarImagenProductoSeleccionada(): void {
+    this.productoImagenSeleccionada = null;
+    this.limpiarVistaPreviaImagen();
+  }
+
+  private limpiarVistaPreviaImagen(): void {
+    const preview = this.productoImagenPreview();
+    if (preview) {
+      URL.revokeObjectURL(preview);
+      this.productoImagenPreview.set(null);
+    }
   }
 
   async guardarProducto(): Promise<void> {
@@ -1203,7 +1268,9 @@ export class AdminDashboardComponent {
         f.unidadMedida.trim(),
 
       imagenUrl:
-        f.imagenUrl.trim() ||
+        (!this.eliminarImagenSeleccionada
+          ? f.imagenUrl.trim()
+          : '') ||
         undefined,
 
       ...(!this.productoEditando() ? { stockInicial } : {})
@@ -1226,12 +1293,24 @@ export class AdminDashboardComponent {
 
       } else {
 
-        await this.service.crearProducto(
+        const creado = await this.service.crearProducto(
           request
         );
-
+        this.productoEditando.set(creado);
       }
 
+      const producto = this.productoEditando();
+      if (producto && this.productoImagenSeleccionada) {
+        await this.service.subirImagenProducto(
+          producto.id,
+          this.productoImagenSeleccionada
+        );
+      } else if (producto && this.eliminarImagenSeleccionada) {
+        await this.service.eliminarImagenProducto(producto.id);
+      }
+
+      this.limpiarImagenProductoSeleccionada();
+      this.eliminarImagenSeleccionada = false;
       this.mostrarModalProducto.set(
         false
       );

@@ -44,6 +44,10 @@ export interface Pedido {
   metodoPago: MetodoPago;
   costoEnvio: number;
   evidenciaUrl?: string;
+  evidenciaContentType?: string;
+  evidenciaNombreArchivo?: string;
+  evidenciaTamanoBytes?: number;
+  evidenciaSubidaEn?: string;
   calificacion?: Calificacion;
   productos: DetallePedidoLinea[];
   creadoEn: string;

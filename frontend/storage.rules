@@ -1,0 +1,13 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /evidencias/{pedidoId}/{fileName=**} {
+      allow read, write: if false;
+    }
+
+    match /imagenes-productos/{productoId}/{fileName=**} {
+      allow read, write: if false;
+    }
+  }
+}

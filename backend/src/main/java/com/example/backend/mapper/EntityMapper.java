@@ -219,7 +219,13 @@ public class EntityMapper {
                 model.getObservaciones(),
                 model.getMetodoPago(),
                 model.getCostoEnvio(),
-                model.getEvidenciaUrl(),
+                model.getEvidenciaStoragePath() != null || model.getEvidenciaUrl() != null
+                        ? "/api/pedidos/" + model.getId() + "/evidencia/archivo"
+                        : null,
+                model.getEvidenciaContentType(),
+                model.getEvidenciaNombreArchivo(),
+                model.getEvidenciaTamanoBytes(),
+                model.getEvidenciaSubidaEn(),
                 toDTO(model.getCalificacion()),
                 productos,
                 model.getCreadoEn(),

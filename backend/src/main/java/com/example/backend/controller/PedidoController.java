@@ -2,6 +2,7 @@
 package com.example.backend.controller;
 
 import com.example.backend.dto.PedidoDTO;
+import com.example.backend.exception.ApiException;
 import com.example.backend.model.EstadoPedido;
 import com.example.backend.security.SecurityContextUtils;
 import com.example.backend.security.UsuarioAutenticado;
@@ -11,7 +12,11 @@ import com.example.backend.service.RepartidorService;
 
 import jakarta.validation.Valid;
 
+import org.springframework.core.io.buffer.DataBufferLimitException;
 import org.springframework.core.io.buffer.DataBufferUtils;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -32,11 +37,14 @@ import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/api/pedidos")
 public class PedidoController {
+
+    private static final int EVIDENCIA_MAX_BYTES = 2 * 1024 * 1024;
 
     private final PedidoService pedidoService;
     private final ClienteService clienteService;
@@ -329,7 +337,7 @@ public class PedidoController {
     }
 
     /**
-     * Sube la evidencia de entrega asociada a un pedido.
+     * Sube el comprobante de pago asociado a un pedido.
      */
     @PostMapping(
             value = "/{id}/evidencia",
@@ -340,10 +348,28 @@ public class PedidoController {
             @RequestPart("archivo") FilePart archivo) {
 
         return SecurityContextUtils.usuarioActual()
-                .flatMap(actual ->
-                        DataBufferUtils.join(archivo.content())
+                .flatMap(actual -> {
+                    if (archivo.headers().getContentLength() > EVIDENCIA_MAX_BYTES) {
+                        return Mono.error(new ApiException(
+                                HttpStatus.PAYLOAD_TOO_LARGE,
+                                "El comprobante no puede superar 2 MB"));
+                    }
+
+                    return DataBufferUtils.join(
+                                    archivo.content(),
+                                    EVIDENCIA_MAX_BYTES + 1)
+                        .onErrorMap(
+                                DataBufferLimitException.class,
+                                error -> new ApiException(
+                                        HttpStatus.PAYLOAD_TOO_LARGE,
+                                        "El comprobante no puede superar 2 MB"))
                                 .map(buffer -> {
                                     try {
+                                        if (buffer.readableByteCount() > EVIDENCIA_MAX_BYTES) {
+                                            throw new ApiException(
+                                                    HttpStatus.PAYLOAD_TOO_LARGE,
+                                                    "El comprobante no puede superar 2 MB");
+                                        }
                                         byte[] bytes =
                                                 new byte[buffer.readableByteCount()];
 
@@ -367,6 +393,34 @@ public class PedidoController {
                                             bytes,
                                             contentType,
                                             archivo.filename());
-                                }));
+                                });
+                });
+    }
+
+    @GetMapping("/{id}/evidencia/archivo")
+    @PreAuthorize("hasAnyRole('CLIENTE', 'ADMINISTRADOR', 'SUPERVISOR')")
+    public Mono<ResponseEntity<byte[]>> descargarEvidencia(
+            @PathVariable String id) {
+
+        return SecurityContextUtils.usuarioActual()
+                .flatMap(actual ->
+                        pedidoService.descargarEvidencia(
+                                        id,
+                                        actual.getUid(),
+                                        actual.getRol())
+                                .map(archivo -> ResponseEntity.ok()
+                                        .contentType(MediaType.parseMediaType(
+                                                archivo.contentType()))
+                                        .cacheControl(CacheControl.noStore())
+                                        .header(
+                                                HttpHeaders.CONTENT_DISPOSITION,
+                                                ContentDisposition.inline()
+                                                        .filename(
+                                                                archivo.nombreArchivo(),
+                                                                StandardCharsets.UTF_8)
+                                                        .build()
+                                                        .toString())
+                                        .header("X-Content-Type-Options", "nosniff")
+                                        .body(archivo.contenido())));
     }
 }

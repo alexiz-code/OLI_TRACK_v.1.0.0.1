@@ -13,6 +13,7 @@ import { FormsModule } from '@angular/forms';
 import { OlitrackService } from '../../core/services/olitrack.service';
 import { NavbarComponent } from '../../shared/components/navbar/navbar.component';
 import { AyacuchoMapComponent } from '../../shared/components/map/ayacucho-map.component';
+import { PedidoEvidenciaComponent } from '../../shared/components/pedido-evidencia.component';
 import { MetodoPago } from '../../core/models/olitrack.models';
 
 @Component({
@@ -22,7 +23,8 @@ import { MetodoPago } from '../../core/models/olitrack.models';
     FormsModule,
     DatePipe,
     NavbarComponent,
-    AyacuchoMapComponent
+    AyacuchoMapComponent,
+    PedidoEvidenciaComponent
   ],
   templateUrl: './client-portal.component.html',
   styleUrl: './client-portal.component.css'
@@ -47,6 +49,7 @@ export class ClientPortalComponent implements OnInit {
 
   errorPerfil = '';
   errorCheckout = '';
+  errorComprobante = '';
 
   checkoutDireccion = '';
   checkoutObservaciones = '';
@@ -379,13 +382,34 @@ export class ClientPortalComponent implements OnInit {
       return;
     }
 
+    const tiposPermitidos = [
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+      'application/pdf'
+    ];
+
+    if (!tiposPermitidos.includes(archivo.type)) {
+      this.errorComprobante = 'Selecciona un archivo JPG, PNG, WEBP o PDF.';
+      input.value = '';
+      return;
+    }
+
+    if (archivo.size === 0 || archivo.size > 2 * 1024 * 1024) {
+      this.errorComprobante = 'El comprobante debe tener contenido y no superar 2 MB.';
+      input.value = '';
+      return;
+    }
+
+    this.errorComprobante = '';
+
     try {
       await this.service.subirEvidencia(pedidoId, archivo);
       await this.service.reloadMisPedidos();
     } catch (error: unknown) {
       console.error('Error al subir comprobante:', error);
 
-      this.errorCheckout = this.obtenerMensajeError(
+      this.errorComprobante = this.obtenerMensajeError(
         error,
         'No se pudo subir el comprobante.'
       );

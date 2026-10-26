@@ -152,6 +152,10 @@ public class PedidoDTO {
         private MetodoPago metodoPago;
         private BigDecimal costoEnvio;
         private String evidenciaUrl;
+        private String evidenciaContentType;
+        private String evidenciaNombreArchivo;
+        private Long evidenciaTamanoBytes;
+        private Date evidenciaSubidaEn;
         private CalificacionDTO.Response calificacion;
         private List<DetallePedidoDTO> productos;
         private Date creadoEn;

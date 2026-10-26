@@ -111,7 +111,7 @@
 
                 @if (producto.imagenUrl) {
                   <img
-                    [src]="producto.imagenUrl"
+                    [src]="service.imagenProductoUrl(producto.imagenUrl)"
                     [alt]="producto.nombre"
                     class="h-52 w-full object-cover"
                     loading="lazy">

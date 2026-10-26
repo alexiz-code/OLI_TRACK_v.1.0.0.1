@@ -42,6 +42,18 @@ export class OlitrackService {
   private readonly authService = inject(AuthService);
   private readonly base = environment.apiUrl;
 
+  imagenProductoUrl(url?: string): string {
+    if (!url) {
+      return '';
+    }
+
+    if (url.startsWith('/api/') && /^https?:\/\//i.test(this.base)) {
+      return new URL(url, this.base).toString();
+    }
+
+    return url;
+  }
+
   // ============================================================
   // HELPERS HTTP
   // ============================================================
@@ -658,6 +670,41 @@ export class OlitrackService {
     return producto;
   }
 
+  async subirImagenProducto(
+    id: string,
+    archivo: File
+  ): Promise<Producto> {
+    const formData = new FormData();
+    formData.append('archivo', archivo);
+
+    const producto = await this.post<Producto>(
+      `/productos/${id}/imagen`,
+      formData
+    );
+
+    await this.reloadProductos(true);
+    this.triggerToast(
+      'SUCCESS',
+      'Imagen actualizada',
+      `La imagen de ${producto.nombre} fue guardada correctamente.`
+    );
+    return producto;
+  }
+
+  async eliminarImagenProducto(id: string): Promise<Producto> {
+    const producto = await this.remove<Producto>(
+      `/productos/${id}/imagen`
+    );
+
+    await this.reloadProductos(true);
+    this.triggerToast(
+      'INFO',
+      'Imagen eliminada',
+      `Se quitó la imagen de ${producto.nombre}.`
+    );
+    return producto;
+  }
+
   async desactivarProducto(
     id: string
   ): Promise<void> {
@@ -1248,6 +1295,15 @@ async reloadClienteProfile(): Promise<void> {
 
     this.reemplazarPedido(
       actualizado
+    );
+  }
+
+  async descargarEvidencia(pedidoId: string): Promise<Blob> {
+    return firstValueFrom(
+      this.http.get(
+        `${this.base}/pedidos/${pedidoId}/evidencia/archivo`,
+        { responseType: 'blob' }
+      )
     );
   }
 
