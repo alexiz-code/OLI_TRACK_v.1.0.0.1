@@ -86,7 +86,7 @@ export class HomeComponent {
 
           this.errorProductos.set(
             error?.status === 0
-              ? 'No se pudo conectar con el servidor. Comprueba que el backend esté ejecutándose.'
+              ? 'No se pudo conectar con el servidor. Inténtalo nuevamente más tarde.'
               : 'No se pudieron cargar los productos. Inténtalo nuevamente.'
           );
 

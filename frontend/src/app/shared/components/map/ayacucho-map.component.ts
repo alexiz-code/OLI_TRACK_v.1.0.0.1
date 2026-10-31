@@ -21,7 +21,7 @@ import {
 } from '../../../core/models/olitrack.models';
 import { CentroMapa } from './ayacucho-map.models';
 
-const DEFAULT_CENTER: Leaflet.LatLngTuple = [-13.1635, -74.224];
+const DEFAULT_CENTER: Leaflet.LatLngTuple = [-13.181655, -74.210656];
 
 /**
  * Evita inyección de HTML en los popups de Leaflet.
@@ -150,9 +150,23 @@ export class AyacuchoMapComponent {
   // INICIALIZACIÓN DEL MAPA
   // ===========================================================
 
-  private async initMap(): Promise<void> {
+  
+private async initMap(): Promise<void> {
+  try {
+    const leafletModule = await import('leaflet');
 
-    const L = await import('leaflet');
+    const L = (
+      (leafletModule as any).default ?? leafletModule
+    ) as typeof import('leaflet');
+
+    if (typeof L.map !== 'function') {
+      console.error(
+        '[OLITRACK] Leaflet no se inicializó correctamente.',
+        leafletModule
+      );
+      return;
+    }
+
     this.leaflet = L;
 
     const cfg = this.companyConfig();
@@ -181,10 +195,6 @@ export class AyacuchoMapComponent {
 
     this.markersLayer = L.layerGroup().addTo(this.map);
 
-    /*
-     * Corrige el tamaño del mapa cuando el contenedor
-     * cambia de tamaño.
-     */
     const observer = new ResizeObserver(() => {
       this.map?.invalidateSize();
     });
@@ -196,7 +206,22 @@ export class AyacuchoMapComponent {
     });
 
     this.mapReady.set(true);
+
+    // Fuerza una actualización del tamaño después de inicializar.
+    requestAnimationFrame(() => {
+      this.map?.invalidateSize();
+    });
+
+    console.info('[OLITRACK] Mapa Leaflet inicializado correctamente.');
+
+  } catch (error) {
+    console.error(
+      '[OLITRACK] Error al inicializar el mapa:',
+      error
+    );
   }
+}
+
 
   // ===========================================================
   // MARCADORES

@@ -1,0 +1,10 @@
+.env
+*.env
+.git
+.idea
+target
+**/target
+**/serviceAccountKey.json
+**/service-account*.json
+**/firebase-adminsdk*.json
+**/secrets

@@ -172,8 +172,8 @@ export class OlitrackService {
       horarioCierre: '19:00',
       diasAtencion: 'Lunes a sábado',
       validarHorarioAtencion: true,
-      latitudCentral: -13.1635,
-      longitudCentral: -74.2240,
+      latitudCentral: -13.181655,
+      longitudCentral: -74.210656,
       metodosPagoHabilitados: [
         'EFECTIVO',
         'YAPE',

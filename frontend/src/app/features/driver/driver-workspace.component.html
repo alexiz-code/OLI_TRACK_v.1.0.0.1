@@ -323,16 +323,25 @@
 
       <div
         *ngIf="pedidoFallido()"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60"
+        class="fixed inset-0 z-50 app-modal-backdrop flex items-center justify-center p-4 bg-slate-900/60"
       >
 
         <div
-          class="bg-white rounded-2xl max-w-md w-full p-6 space-y-3"
+          class="app-modal-panel bg-white rounded-2xl max-w-md w-full p-6 space-y-3"
         >
 
-          <h3 class="font-black text-slate-900">
-            Registrar entrega fallida
-          </h3>
+          <div class="flex items-start justify-between gap-3">
+            <h3 class="font-black text-slate-900">
+              Registrar entrega fallida
+            </h3>
+            <button
+              type="button"
+              (click)="pedidoFallido.set(null)"
+              class="shrink-0 rounded-xl px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-50"
+            >
+              ← Regresar
+            </button>
+          </div>
 
 
           <textarea
@@ -344,9 +353,7 @@
           </textarea>
 
 
-          <div
-            class="flex justify-end gap-2"
-          >
+          <div class="app-modal-actions flex justify-end gap-2 border-t border-slate-200 pt-3">
 
             <button
               type="button"
@@ -368,66 +375,75 @@
 
           </div>
 
-          <!-- MODAL REPORTE DE INCIDENCIA -->
-          <div
-            *ngIf="pedidoIncidencia() as pedido"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4"
-          >
-            <section class="w-full max-w-md space-y-4 rounded-2xl bg-white p-6 shadow-2xl">
-              <div>
-                <h3 class="font-black text-slate-900">Reportar incidencia</h3>
-                <p class="mt-1 text-xs text-slate-500">
-                  Pedido #{{ pedido.id.slice(-6) }}
-                </p>
-              </div>
-
-              <label class="block text-xs font-bold text-slate-700">
-                Tipo de incidencia
-                <select
-                  [(ngModel)]="tipoIncidencia"
-                  name="tipoIncidencia"
-                  class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm"
-                >
-                  <option *ngFor="let tipo of tiposIncidencia" [ngValue]="tipo.value">
-                    {{ tipo.label }}
-                  </option>
-                </select>
-              </label>
-
-              <label class="block text-xs font-bold text-slate-700">
-                Descripción
-                <textarea
-                  [(ngModel)]="descripcionIncidencia"
-                  name="descripcionIncidencia"
-                  rows="3"
-                  maxlength="1000"
-                  placeholder="Describe brevemente qué ocurrió"
-                  class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm"
-                ></textarea>
-              </label>
-
-              <div class="flex justify-end gap-2">
-                <button
-                  type="button"
-                  (click)="pedidoIncidencia.set(null)"
-                  class="rounded-xl px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  (click)="confirmarReporteIncidencia()"
-                  [disabled]="!descripcionIncidencia.trim()"
-                  class="rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-700 disabled:opacity-50"
-                >
-                  Enviar reporte
-                </button>
-              </div>
-            </section>
-          </div>
-
         </div>
 
+      </div>
+
+      <!-- MODAL REPORTE DE INCIDENCIA -->
+      <div
+        *ngIf="pedidoIncidencia() as pedido"
+        class="fixed inset-0 z-50 app-modal-backdrop flex items-center justify-center bg-slate-900/60 p-4"
+      >
+        <section class="app-modal-panel w-full max-w-md space-y-4 rounded-2xl bg-white p-6 shadow-2xl">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <h3 class="font-black text-slate-900">Reportar incidencia</h3>
+              <p class="mt-1 text-xs text-slate-500">
+                Pedido #{{ pedido.id.slice(-6) }}
+              </p>
+            </div>
+            <button
+              type="button"
+              (click)="pedidoIncidencia.set(null)"
+              class="shrink-0 rounded-xl px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-50"
+            >
+              ← Regresar
+            </button>
+          </div>
+
+          <label class="block text-xs font-bold text-slate-700">
+            Tipo de incidencia
+            <select
+              [(ngModel)]="tipoIncidencia"
+              name="tipoIncidencia"
+              class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm"
+            >
+              <option *ngFor="let tipo of tiposIncidencia" [ngValue]="tipo.value">
+                {{ tipo.label }}
+              </option>
+            </select>
+          </label>
+
+          <label class="block text-xs font-bold text-slate-700">
+            Descripción
+            <textarea
+              [(ngModel)]="descripcionIncidencia"
+              name="descripcionIncidencia"
+              rows="3"
+              maxlength="1000"
+              placeholder="Describe brevemente qué ocurrió"
+              class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm"
+            ></textarea>
+          </label>
+
+          <div class="app-modal-actions flex justify-end gap-2 border-t border-slate-200 pt-3">
+            <button
+              type="button"
+              (click)="pedidoIncidencia.set(null)"
+              class="rounded-xl px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              (click)="confirmarReporteIncidencia()"
+              [disabled]="!descripcionIncidencia.trim()"
+              class="rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-700 disabled:opacity-50"
+            >
+              Enviar reporte
+            </button>
+          </div>
+        </section>
       </div>
 
     </div>

@@ -81,14 +81,24 @@ En Cloud Run, asigna al servicio una identidad de servicio y otórgale `roles/da
 
 El valor de `FIREBASE_STORAGE_BUCKET` es `olitrack-f0fcc.firebasestorage.app` sin el prefijo `gs://`. `CORS_ALLOWED_ORIGINS` puede configurarse con orígenes permitidos separados por comas. La integración de Hosting puede requerir que Cloud Run acepte invocaciones públicas; las rutas de la API siguen requiriendo y verificando el token de Firebase.
 
-Despliega desde la carpeta `frontend`:
+Primero despliega el backend real en Cloud Run desde PowerShell:
 
-```bash
+```powershell
+cd ..\backend
+gcloud run deploy oli-track-v-1-0-0-1-git --source . --project olitrack-f0fcc --region us-central1 --port 8080 --allow-unauthenticated --update-env-vars FIREBASE_STORAGE_BUCKET=olitrack-f0fcc.firebasestorage.app
+```
+
+Confirma en Cloud Run que está asignada la identidad de servicio con los permisos indicados arriba. En Firebase Console, elimina del servicio cualquier variable `FIREBASE_CREDENTIALS_PATH`; ADC no requiere esa variable ni una clave privada. El acceso público de invocación permite que Hosting llegue a la API; las rutas protegidas siguen validando el token de Firebase en la aplicación.
+
+Luego recompila y despliega Hosting desde la carpeta `frontend`:
+
+```powershell
+cd ..\frontend
 npm run build
 firebase deploy --only hosting,storage
 ```
 
-La URL `https://olitrack-f0fcc.web.app` respondió durante la comprobación, pero el proxy de `/api` no funcionará hasta que Cloud Run tenga una revisión real y saludable. Configura primero la identidad de servicio y sus permisos, y confirma que el backend pase su compilación antes de probar una subida autenticada.
+Después del despliegue, comprueba `https://oli-track-v-1-0-0-1-git-345576911273.us-central1.run.app/actuator/health` y confirma que responda JSON con estado `UP`. El rewrite `/api/**` de Hosting no funcionará correctamente mientras Cloud Run siga sirviendo la página placeholder en lugar del backend.
 
 ## Additional Resources
 

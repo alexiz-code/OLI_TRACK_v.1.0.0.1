@@ -16,6 +16,6 @@ export interface ToastMessage {
 export const EMPRESA_CONFIG_DEFAULT = {
   nombre: 'OLI FRESH ICE',
   direccionCentral: 'Ayacucho, Peru',
-  latitudCentral: -13.1635,
-  longitudCentral: -74.2240
+  latitudCentral: -13.181655,
+  longitudCentral: -74.210656
 };

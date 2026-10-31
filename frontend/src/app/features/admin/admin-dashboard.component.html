@@ -1216,12 +1216,12 @@
     @if (mostrarModalUsuario()) {
 
       <div
-        class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4"
+        class="fixed inset-0 z-50 app-modal-backdrop flex items-center justify-center bg-slate-900/60 p-4"
         (click)="cerrarModalUsuario()"
       >
 
         <div
-          class="w-full max-w-lg rounded-2xl bg-white shadow-2xl"
+          class="app-modal-panel w-full max-w-lg rounded-2xl bg-white shadow-2xl"
           (click)="$event.stopPropagation()"
         >
 
@@ -1244,9 +1244,10 @@
             <button
               type="button"
               (click)="cerrarModalUsuario()"
-              class="text-xl text-slate-400 hover:text-slate-700"
+              [disabled]="guardando()"
+              class="rounded-xl px-3 py-2 text-sm font-bold text-blue-700 hover:bg-blue-50 disabled:opacity-50"
             >
-              Cerrar
+              ← Regresar
             </button>
 
           </div>
@@ -1386,7 +1387,7 @@
             }
 
             <div
-              class="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end"
+              class="app-modal-actions flex flex-col-reverse gap-2 border-t border-slate-200 pt-3 sm:flex-row sm:justify-end"
             >
 
               <button
@@ -1417,21 +1418,31 @@
 
     @if (usuarioEditando()) {
       <div
-        class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4"
+        class="fixed inset-0 z-50 app-modal-backdrop flex items-center justify-center bg-slate-900/60 p-4"
         (click)="cerrarEdicionUsuario()"
       >
         <section
-          class="w-full max-w-lg rounded-2xl bg-white shadow-2xl"
+          class="app-modal-panel w-full max-w-lg rounded-2xl bg-white shadow-2xl"
           role="dialog"
           aria-modal="true"
           aria-labelledby="editar-usuario-titulo"
           (click)="$event.stopPropagation()"
         >
-          <div class="border-b border-slate-200 px-5 py-4">
-            <h2 id="editar-usuario-titulo" class="text-lg font-bold text-slate-800">
-              Editar usuario
-            </h2>
-            <p class="text-sm text-slate-500">{{ usuarioEditando()?.email }}</p>
+          <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+            <div>
+              <h2 id="editar-usuario-titulo" class="text-lg font-bold text-slate-800">
+                Editar usuario
+              </h2>
+              <p class="text-sm text-slate-500">{{ usuarioEditando()?.email }}</p>
+            </div>
+            <button
+              type="button"
+              (click)="cerrarEdicionUsuario()"
+              [disabled]="guardando()"
+              class="rounded-xl px-3 py-2 text-sm font-bold text-blue-700 hover:bg-blue-50 disabled:opacity-50"
+            >
+              ← Regresar
+            </button>
           </div>
           <form class="space-y-4 p-5" (ngSubmit)="guardarEdicionUsuario()">
             <label class="block text-sm font-semibold text-slate-700">
@@ -1463,7 +1474,7 @@
             <p class="text-xs text-slate-500">
               El correo, la contraseña y el rol se administran por separado.
             </p>
-            <div class="flex justify-end gap-2 pt-2">
+            <div class="app-modal-actions flex justify-end gap-2 border-t border-slate-200 pt-3">
               <button
                 type="button"
                 (click)="cerrarEdicionUsuario()"
@@ -1486,10 +1497,20 @@
     }
 
     @if (productoParaMovimiento()) {
-      <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
-        <section class="w-full max-w-md space-y-4 rounded-2xl bg-white p-6 shadow-2xl">
+      <div class="fixed inset-0 z-50 app-modal-backdrop flex items-center justify-center bg-slate-900/60 p-4">
+        <section class="app-modal-panel w-full max-w-md space-y-4 rounded-2xl bg-white p-6 shadow-2xl">
           <div>
-            <h2 class="text-lg font-black text-slate-900">Movimiento de inventario</h2>
+            <div class="flex items-center justify-between gap-3">
+              <h2 class="text-lg font-black text-slate-900">Movimiento de inventario</h2>
+              <button
+                type="button"
+                (click)="cerrarMovimientoInventario()"
+                [disabled]="guardandoMovimiento()"
+                class="shrink-0 rounded-xl px-3 py-2 text-sm font-bold text-blue-700 hover:bg-blue-50 disabled:opacity-50"
+              >
+                ← Regresar
+              </button>
+            </div>
             <p class="text-sm text-slate-500">{{ productoParaMovimiento()?.nombre }}</p>
             <p class="mt-1 text-sm font-semibold text-slate-700">
               Stock actual: {{ stockActualProducto(productoParaMovimiento()) }}
@@ -1516,7 +1537,7 @@
             Motivo (opcional)
             <input [(ngModel)]="movimientoForm.motivo" name="movimientoMotivo" type="text" maxlength="250" class="mt-1 w-full rounded-xl border border-slate-300 p-2.5" />
           </label>
-          <div class="flex justify-end gap-2">
+          <div class="app-modal-actions flex justify-end gap-2 border-t border-slate-200 pt-3">
             <button type="button" (click)="cerrarMovimientoInventario()" [disabled]="guardandoMovimiento()" class="rounded-xl border px-4 py-2 text-sm font-semibold">Cancelar</button>
             <button type="button" (click)="guardarMovimientoInventario()" [disabled]="guardandoMovimiento()" class="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
               {{ guardandoMovimiento() ? 'Guardando…' : 'Registrar movimiento' }}
@@ -1533,12 +1554,14 @@
     @if (mostrarModalProducto()) {
 
       <div
-        class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4"
+        class="fixed inset-0 z-50 app-modal-backdrop flex items-center justify-center bg-slate-900/60 p-4"
         (click)="cerrarModalProducto()"
       >
 
         <div
-          class="w-full max-w-lg rounded-2xl bg-white shadow-2xl"
+          class="app-modal-panel app-modal-panel--form w-full max-w-lg rounded-2xl bg-white shadow-2xl"
+          role="dialog"
+          aria-modal="true"
           (click)="$event.stopPropagation()"
         >
 
@@ -1565,9 +1588,10 @@
             <button
               type="button"
               (click)="cerrarModalProducto()"
-              class="text-xl text-slate-400 hover:text-slate-700"
+              [disabled]="guardando()"
+              class="rounded-xl px-3 py-2 text-sm font-bold text-blue-700 hover:bg-blue-50 disabled:opacity-50"
             >
-              Cerrar
+              ← Regresar
             </button>
 
           </div>
@@ -1749,7 +1773,7 @@
             </div>
 
             <div
-              class="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end"
+              class="app-modal-actions flex flex-col-reverse gap-2 border-t border-slate-200 pt-3 sm:flex-row sm:justify-end"
             >
 
               <button

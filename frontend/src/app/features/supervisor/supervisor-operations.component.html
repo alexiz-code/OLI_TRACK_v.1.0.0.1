@@ -754,23 +754,30 @@
       @if (pedidoRechazo(); as pedido) {
 
         <div
-          class="fixed inset-0 z-50
+          class="fixed inset-0 z-50 app-modal-backdrop
                  flex items-center justify-center
                  p-4 bg-slate-900/60"
         >
 
           <div
-            class="bg-white rounded-2xl
+            class="app-modal-panel bg-white rounded-2xl
                    max-w-md w-full
                    p-6 space-y-3"
           >
 
-            <h3
-              class="font-black text-slate-900"
-            >
-              Rechazar pedido
-              #{{ pedido.id.slice(-6) }}
-            </h3>
+            <div class="flex items-start justify-between gap-3">
+              <h3 class="font-black text-slate-900">
+                Rechazar pedido
+                #{{ pedido.id.slice(-6) }}
+              </h3>
+              <button
+                type="button"
+                (click)="pedidoRechazo.set(null)"
+                class="shrink-0 rounded-xl px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-50"
+              >
+                ← Regresar
+              </button>
+            </div>
 
 
             <textarea
@@ -783,7 +790,7 @@
             ></textarea>
 
 
-            <div class="flex justify-end gap-2">
+            <div class="app-modal-actions flex justify-end gap-2 border-t border-slate-200 pt-3">
 
               <button
                 type="button"
@@ -824,23 +831,30 @@
       @if (pedidoReasignar(); as pedido) {
 
         <div
-          class="fixed inset-0 z-50
+          class="fixed inset-0 z-50 app-modal-backdrop
                  flex items-center justify-center
                  p-4 bg-slate-900/60"
         >
 
           <div
-            class="bg-white rounded-2xl
+            class="app-modal-panel bg-white rounded-2xl
                    max-w-md w-full
                    p-6 space-y-3"
           >
 
-            <h3
-              class="font-black text-slate-900"
-            >
-              {{ pedido.repartidorId ? 'Reasignar pedido' : 'Asignar repartidor' }}
-              #{{ pedido.id.slice(-6) }}
-            </h3>
+            <div class="flex items-start justify-between gap-3">
+              <h3 class="font-black text-slate-900">
+                {{ pedido.repartidorId ? 'Reasignar pedido' : 'Asignar repartidor' }}
+                #{{ pedido.id.slice(-6) }}
+              </h3>
+              <button
+                type="button"
+                (click)="pedidoReasignar.set(null)"
+                class="shrink-0 rounded-xl px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-50"
+              >
+                ← Regresar
+              </button>
+            </div>
 
             @if (service.repartidores().length === 0) {
               <div class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
@@ -891,7 +905,7 @@
             </select>
 
 
-            <div class="flex justify-end gap-2">
+            <div class="app-modal-actions flex justify-end gap-2 border-t border-slate-200 pt-3">
 
               <button
                 type="button"

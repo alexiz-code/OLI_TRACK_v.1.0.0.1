@@ -33,22 +33,22 @@ import { OlitrackService } from '../../core/services/olitrack.service';
 
     @if (url(); as objectUrl) {
       <div
-        class="fixed inset-0 z-[100] bg-black/70 p-4 flex items-center justify-center"
+        class="fixed inset-0 z-[100] app-modal-backdrop bg-black/70 p-4 flex items-center justify-center"
         role="dialog"
         aria-modal="true"
         aria-label="Comprobante de pago"
         (click)="cerrar()"
       >
         <section
-          class="relative bg-white rounded-2xl p-4 max-w-4xl max-h-[90vh] overflow-auto"
+          class="app-modal-panel relative bg-white rounded-2xl p-4 max-w-4xl max-h-[90vh]"
           (click)="$event.stopPropagation()"
         >
           <button
             type="button"
-            class="float-right px-3 py-1 rounded-lg bg-slate-100 text-slate-800 font-bold"
+            class="float-right rounded-lg bg-slate-100 px-3 py-2 text-sm font-bold text-slate-800"
             (click)="cerrar()"
           >
-            Cerrar
+            ← Regresar
           </button>
 
           <h2 class="font-bold text-slate-900 mb-4">

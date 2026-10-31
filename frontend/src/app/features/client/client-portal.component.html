@@ -593,10 +593,10 @@
       <!-- MODAL CHECKOUT -->
       @if (showCheckoutModal()) {
         <div
-          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60"
+          class="fixed inset-0 z-50 app-modal-backdrop flex items-center justify-center p-4 bg-slate-900/60"
         >
           <section
-            class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4"
+            class="app-modal-panel bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4"
           >
             <div class="flex items-center justify-between border-b pb-3">
               <h3 class="font-black text-slate-900 text-base">
@@ -607,9 +607,10 @@
                 type="button"
                 (click)="showCheckoutModal.set(false)"
                 [disabled]="confirmando()"
-                aria-label="Cerrar"
+                aria-label="Regresar y cerrar"
+                class="rounded-xl px-3 py-2 text-sm font-bold text-blue-700 hover:bg-blue-50 disabled:opacity-50"
               >
-                Cerrar
+                ← Regresar
               </button>
             </div>
 
@@ -696,7 +697,7 @@
                 </p>
               }
 
-              <div class="pt-2 flex items-center justify-end gap-2">
+              <div class="app-modal-actions pt-3 flex flex-col-reverse items-stretch justify-end gap-2 border-t border-slate-200 sm:flex-row sm:items-center">
                 <button
                   type="button"
                   (click)="showCheckoutModal.set(false)"
@@ -727,10 +728,10 @@
       <!-- MODAL EDITAR PERFIL -->
       @if (showProfileModal()) {
         <div
-          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60"
+          class="fixed inset-0 z-50 app-modal-backdrop flex items-center justify-center p-4 bg-slate-900/60"
         >
           <section
-            class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4"
+            class="app-modal-panel bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4"
           >
             <div class="flex items-center justify-between border-b pb-3">
               <h3 class="font-black text-slate-900 text-base">
@@ -740,9 +741,10 @@
               <button
                 type="button"
                 (click)="showProfileModal.set(false)"
-                aria-label="Cerrar"
+                aria-label="Regresar y cerrar"
+                class="rounded-xl px-3 py-2 text-sm font-bold text-blue-700 hover:bg-blue-50"
               >
-                Cerrar
+                ← Regresar
               </button>
             </div>
 
@@ -800,7 +802,7 @@
                 />
               </div>
 
-              <div class="pt-2 flex items-center justify-end gap-2">
+              <div class="app-modal-actions pt-3 flex flex-col-reverse items-stretch justify-end gap-2 border-t border-slate-200 sm:flex-row sm:items-center">
                 <button
                   type="button"
                   (click)="showProfileModal.set(false)"

@@ -17,8 +17,13 @@ import { Router, RouterLink } from '@angular/router';
 
 import { AuthService } from '../../core/services/auth.service';
 import { OlitrackService } from '../../core/services/olitrack.service';
+import { Usuario } from '../../core/models/olitrack.models';
 
 import type * as Leaflet from 'leaflet';
+
+type ResultadoAutenticacionRegistro =
+  | { exitoso: true }
+  | { exitoso: false; error: unknown };
 
 @Component({
   selector: 'app-registro',
@@ -49,6 +54,8 @@ export class RegistroComponent implements OnDestroy {
   private mapa?: Leaflet.Map;
   private marcador?: Leaflet.CircleMarker;
   private temporizadorMapa?: ReturnType<typeof setTimeout>;
+  private usuarioRegistrado: Usuario | null = null;
+  private preparacionAutenticacion: Promise<ResultadoAutenticacionRegistro> | null = null;
 
   readonly formCuenta = this.fb.nonNullable.group({
     nombre: ['', Validators.required],
@@ -81,14 +88,14 @@ export class RegistroComponent implements OnDestroy {
     }
 
     this.cargando = true;
-    this.mensajeCarga = 'Creando tu cuenta...';
+    this.mensajeCarga = 'Creando tu cuenta. Puedes adelantar los datos del negocio...';
     this.error = '';
 
     const inicio = performance.now();
+    const datos = this.formCuenta.getRawValue();
+    this.paso = 2;
 
     try {
-      const datos = this.formCuenta.getRawValue();
-
       const usuario = await this.authService.registrarCliente({
         nombre: datos.nombre.trim(),
         email: datos.email.trim(),
@@ -103,15 +110,18 @@ export class RegistroComponent implements OnDestroy {
         );
       }
 
+      this.usuarioRegistrado = usuario;
+      this.preparacionAutenticacion = this.autenticarCuentaRegistrada(
+        datos.email,
+        datos.password
+      );
+
       console.log(
         `[Registro] Cuenta creada en ${
           (performance.now() - inicio).toFixed(0)
         } ms`
       );
 
-      // No iniciar sesión ni crear el perfil del negocio aquí.
-      // Mostrar el paso 2 tan pronto se confirme la cuenta.
-      this.paso = 2;
       this.error = '';
 
       console.log(
@@ -120,6 +130,7 @@ export class RegistroComponent implements OnDestroy {
         } ms`
       );
     } catch (error: unknown) {
+      this.paso = 1;
       console.error('[Registro] Error creando cuenta:', error);
       this.mostrarErrorRegistro(error);
     } finally {
@@ -134,9 +145,24 @@ export class RegistroComponent implements OnDestroy {
     this.cerrarMapa();
     this.error = '';
     this.paso = 1;
+    this.usuarioRegistrado = null;
+    this.preparacionAutenticacion = null;
   }
 
-  // PASO 2: INICIAR SESIÓN Y GUARDAR EL PERFIL DEL NEGOCIO
+  private autenticarCuentaRegistrada(
+    email: string,
+    password: string
+  ): Promise<ResultadoAutenticacionRegistro> {
+    return this.authService.login(
+      email.trim(),
+      password
+    ).then(
+      () => ({ exitoso: true as const }),
+      error => ({ exitoso: false as const, error })
+    );
+  }
+
+  // PASO 2: GUARDAR EL PERFIL DEL NEGOCIO
   async completarPerfil(): Promise<void> {
     if (this.cargando) return;
 
@@ -149,7 +175,6 @@ export class RegistroComponent implements OnDestroy {
     this.error = '';
 
     try {
-      const cuenta = this.formCuenta.getRawValue();
       const negocio = this.formNegocio.getRawValue();
 
       // Validar coordenadas antes de enviarlas.
@@ -167,24 +192,26 @@ export class RegistroComponent implements OnDestroy {
         throw new Error('Las coordenadas ingresadas no son válidas.');
       }
 
-      // 1. Iniciar sesión con la cuenta recién creada.
-      this.mensajeCarga = 'Iniciando sesión de forma segura...';
-
-      console.time('[Registro] Inicio de sesión');
-
-      await this.authService.login(
-        cuenta.email.trim(),
-        cuenta.password
+      this.mensajeCarga = 'Verificando tu cuenta...';
+      const resultadoAutenticacion = await (
+        this.preparacionAutenticacion ??
+        this.autenticarCuentaRegistrada(
+          this.formCuenta.controls.email.value,
+          this.formCuenta.controls.password.value
+        )
       );
 
-      console.timeEnd('[Registro] Inicio de sesión');
+      if (!resultadoAutenticacion.exitoso) {
+        this.preparacionAutenticacion = null;
+        throw resultadoAutenticacion.error;
+      }
 
       // 2. Obtener el perfil correspondiente a la sesión actual.
       const usuario = this.authService.usuarioActual;
 
-      if (!usuario) {
+      if (!usuario || usuario.id !== this.usuarioRegistrado?.id) {
         throw new Error(
-          'No se pudo cargar el usuario autenticado. Inicia sesión nuevamente.'
+          'La cuenta autenticada no coincide con la cuenta registrada. Inicia sesión nuevamente.'
         );
       }
 

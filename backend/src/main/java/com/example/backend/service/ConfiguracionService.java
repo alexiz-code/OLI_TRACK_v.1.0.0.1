@@ -91,8 +91,8 @@ public class ConfiguracionService {
         c.setHorarioCierre("22:00");
         c.setDiasAtencion("Lunes a Domingo");
         c.setValidarHorarioAtencion(false);
-        c.setLatitudCentral(-13.1635);
-        c.setLongitudCentral(-74.2240);
+        c.setLatitudCentral(-13.181655);
+        c.setLongitudCentral(-74.210656);
         c.setMetodosPagoHabilitados(new ArrayList<>(List.of(
                 MetodoPago.EFECTIVO,
                 MetodoPago.YAPE,

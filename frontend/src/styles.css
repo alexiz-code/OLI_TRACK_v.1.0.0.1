@@ -7,9 +7,11 @@
   color-scheme: light;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: #0f172a;
-  background: #f8fafc;
+  background: #f0f9ff;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+  --app-ice: #f0f9ff;
+  --app-shadow: 0 16px 40px rgb(15 23 42 / 8%);
 }
 
 * {
@@ -20,7 +22,102 @@ body {
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
-  background: #f8fafc;
+  background:
+    radial-gradient(ellipse at 12% 0%, rgb(191 219 254 / 45%), transparent 34rem),
+    radial-gradient(ellipse at 92% 14%, rgb(153 246 228 / 30%), transparent 30rem),
+    linear-gradient(180deg, #f0f9ff 0%, #f8fafc 48%, #f0fdfa 100%);
+  background-attachment: fixed;
+}
+
+.bg-slate-50 {
+  background-color: var(--app-ice);
+}
+
+.bg-white.border {
+  box-shadow: 0 8px 26px rgb(15 23 42 / 5%);
+}
+
+article.bg-white,
+section.bg-white {
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+article.bg-white:hover {
+  border-color: #bfdbfe;
+  box-shadow: var(--app-shadow);
+}
+
+.fixed.inset-0.app-modal-backdrop {
+  align-items: flex-start;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-top: max(1rem, env(safe-area-inset-top));
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+.app-modal-backdrop > .app-modal-panel {
+  max-height: calc(100dvh - 2rem);
+  margin-block: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: #94a3b8 #f1f5f9;
+  scrollbar-width: thin;
+}
+
+.app-modal-backdrop > .app-modal-panel::-webkit-scrollbar {
+  width: 0.65rem;
+}
+
+.app-modal-backdrop > .app-modal-panel::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 9999px;
+}
+
+.app-modal-backdrop > .app-modal-panel::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border: 2px solid #f1f5f9;
+  border-radius: 9999px;
+}
+
+.app-modal-backdrop > .app-modal-panel--form {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.app-modal-panel--form > form {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: #94a3b8 #f1f5f9;
+  scrollbar-width: thin;
+}
+
+.app-modal-panel--form > form::-webkit-scrollbar {
+  width: 0.65rem;
+}
+
+.app-modal-panel--form > form::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 9999px;
+}
+
+.app-modal-panel--form > form::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border: 2px solid #f1f5f9;
+  border-radius: 9999px;
+}
+
+.app-modal-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  background: #fff;
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
 }
 
 button,
@@ -50,6 +147,10 @@ select {
 
 button:not(:disabled):active {
   transform: translateY(1px);
+}
+
+button:not(:disabled):hover {
+  filter: brightness(1.04);
 }
 
 button:focus-visible,
@@ -85,6 +186,11 @@ textarea::placeholder {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+
+  article.bg-white,
+  section.bg-white {
+    transition: none;
   }
 }
 

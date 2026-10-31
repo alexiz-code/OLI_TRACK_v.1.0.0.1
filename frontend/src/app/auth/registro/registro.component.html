@@ -1,18 +1,36 @@
 
-    <div class="registro-container">
+    <main class="registro-container">
       <div class="registro-card">
+        <p class="registro-marca">OLI FRESH ICE</p>
         <h1>OLITRACK</h1>
-        <h2>Crear cuenta</h2>
+        <h2>Tu cuenta, lista para pedir</h2>
 
-        <div class="pasos">
-          <div [class.activo]="paso === 1">
-            1. Cuenta
+        <div
+          class="pasos"
+          role="progressbar"
+          [attr.aria-valuenow]="paso"
+          aria-valuemin="1"
+          aria-valuemax="2"
+          [attr.aria-valuetext]="paso === 1 ? 'Paso 1 de 2: Cuenta' : 'Paso 2 de 2: Negocio'"
+        >
+          <div class="paso" [class.activo]="paso === 1" [class.completado]="paso === 2">
+            <span class="paso-numero">01</span>
+            <span>Cuenta</span>
           </div>
-
-          <div [class.activo]="paso === 2">
-            2. Negocio
+          <span class="pasos-linea" [class.completada]="paso === 2"></span>
+          <div class="paso" [class.activo]="paso === 2">
+            <span class="paso-numero">02</span>
+            <span>Negocio</span>
           </div>
         </div>
+
+        <p class="paso-descripcion">
+          @if (paso === 1) {
+            Crea tu acceso seguro para continuar.
+          } @else {
+            Cuéntanos dónde entregamos tus pedidos.
+          }
+        </p>
 
         @if (error) {
           <div class="error" role="alert">
@@ -285,7 +303,7 @@
                 type="submit"
                 [disabled]="formNegocio.invalid || cargando"
               >
-                {{ cargando ? 'Guardando...' : 'Completar registro' }}
+                {{ cargando ? 'Finalizando registro...' : 'Completar registro' }}
               </button>
             </div>
           </form>
@@ -296,5 +314,5 @@
           <a routerLink="/login">Iniciar sesión</a>
         </p>
       </div>
-    </div>
+    </main>
   
