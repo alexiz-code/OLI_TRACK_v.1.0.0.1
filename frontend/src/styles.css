@@ -11,7 +11,8 @@
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   --app-ice: #f0f9ff;
-  --app-shadow: 0 16px 40px rgb(15 23 42 / 8%);
+  --app-mint: #ecfdf5;
+  --app-shadow: 0 18px 42px rgb(15 23 42 / 9%);
 }
 
 * {
@@ -23,9 +24,9 @@ body {
   min-height: 100vh;
   margin: 0;
   background:
-    radial-gradient(ellipse at 12% 0%, rgb(191 219 254 / 45%), transparent 34rem),
-    radial-gradient(ellipse at 92% 14%, rgb(153 246 228 / 30%), transparent 30rem),
-    linear-gradient(180deg, #f0f9ff 0%, #f8fafc 48%, #f0fdfa 100%);
+    radial-gradient(ellipse at 10% 0%, rgb(191 219 254 / 52%), transparent 36rem),
+    radial-gradient(ellipse at 94% 12%, rgb(153 246 228 / 36%), transparent 32rem),
+    linear-gradient(180deg, var(--app-ice) 0%, #f8fafc 48%, var(--app-mint) 100%);
   background-attachment: fixed;
 }
 
@@ -48,6 +49,7 @@ section.bg-white {
 article.bg-white:hover {
   border-color: #bfdbfe;
   box-shadow: var(--app-shadow);
+  transform: translateY(-2px);
 }
 
 .fixed.inset-0.app-modal-backdrop {
@@ -191,6 +193,10 @@ textarea::placeholder {
   article.bg-white,
   section.bg-white {
     transition: none;
+  }
+
+  article.bg-white:hover {
+    transform: none;
   }
 }
 

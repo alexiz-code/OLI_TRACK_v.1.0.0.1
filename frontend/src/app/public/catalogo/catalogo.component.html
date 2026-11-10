@@ -1,29 +1,41 @@
 
     <div class="contenedor">
 
-      <h2>Nuestro catálogo</h2>
+      <header class="encabezado">
+        <p class="sobretitulo">OLITRACK · ABASTECIMIENTO</p>
+        <h2>Nuestro catálogo</h2>
+        <p class="descripcion-encabezado">
+          Explora los productos disponibles y encuentra lo que tu negocio necesita.
+        </p>
+      </header>
 
-      @if (productos.length > 0) {
+      @if (productos().length > 0) {
 
         <div class="grid">
 
-          @for (p of productos; track p.id) {
+          @for (p of productos(); track p.id) {
 
             <div class="tarjeta">
+              <div class="imagen-producto">
+                @if (p.imagenUrl) {
+                  <img [src]="service.imagenProductoUrl(p.imagenUrl)" [alt]="p.nombre" />
+                } @else {
+                  <span>Imagen no disponible</span>
+                }
+              </div>
 
               <h4>
                 {{ p.nombre }}
               </h4>
 
-              <p>
+              <p class="descripcion-producto">
                 {{ p.descripcion }}
               </p>
 
               <p class="precio">
                 S/ {{ p.precioUnitario.toFixed(2) }}
-                /
-                {{ p.unidadMedida }}
               </p>
+              <p class="unidad">{{ p.unidadMedida }}</p>
 
             </div>
 

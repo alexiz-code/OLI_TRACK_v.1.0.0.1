@@ -1,29 +1,126 @@
 
     .contenedor {
-      max-width: 1000px;
-      margin: 2rem auto;
-      padding: 1rem;
+      max-width: 1180px;
+      margin: 3rem auto;
+      padding: 1.5rem;
       font-family: system-ui, sans-serif;
+    }
+
+    .encabezado {
+      max-width: 650px;
+      margin-bottom: 2rem;
+    }
+
+    .sobretitulo {
+      margin: 0 0 0.5rem;
+      color: #0f766e;
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+    }
+
+    .encabezado h2 {
+      margin: 0;
+      color: #0f172a;
+      font-size: clamp(1.8rem, 4vw, 2.5rem);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+    }
+
+    .descripcion-encabezado {
+      margin: 0.75rem 0 0;
+      color: #64748b;
+      line-height: 1.65;
     }
 
     .grid {
       display: grid;
       grid-template-columns: repeat(
         auto-fit,
-        minmax(200px, 1fr)
+        minmax(min(100%, 240px), 1fr)
       );
-      gap: 1.25rem;
-      margin-top: 1.5rem;
+      align-items: stretch;
+      gap: 1.5rem;
     }
 
     .tarjeta {
-      border: 1px solid #e2e8f0;
-      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
       padding: 1rem;
+      border: 1px solid #dbeafe;
+      border-radius: 1.25rem;
+      background: rgb(255 255 255 / 90%);
+      box-shadow: 0 12px 30px rgb(15 23 42 / 6%);
+      transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+    }
+
+    .tarjeta:hover {
+      transform: translateY(-4px);
+      border-color: #99f6e4;
+      box-shadow: 0 20px 36px rgb(15 23 42 / 10%);
+    }
+
+    .imagen-producto {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 190px;
+      margin: -1rem -1rem 1rem;
+      overflow: hidden;
+      border-radius: 1.2rem 1.2rem 0 0;
+      background: linear-gradient(135deg, #eff6ff, #f0fdfa);
+      color: #94a3b8;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .imagen-producto img {
+      width: 100%;
+      height: 100%;
+      padding: 1rem;
+      object-fit: contain;
+    }
+
+    .tarjeta h4 {
+      margin: 0 0 0.5rem;
+      overflow-wrap: anywhere;
+      color: #0f172a;
+      font-size: 1.05rem;
+      font-weight: 800;
+    }
+
+    .descripcion-producto {
+      flex: 1;
+      margin: 0;
+      overflow-wrap: anywhere;
+      color: #64748b;
+      line-height: 1.6;
     }
 
     .precio {
+      margin: 1rem 0 0;
       color: #1d4ed8;
+      font-size: 1.25rem;
       font-weight: 700;
+    }
+
+    .unidad {
+      margin: 0.2rem 0 0;
+      color: #0f766e;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .tarjeta {
+        transition: none;
+      }
+
+      .tarjeta:hover {
+        transform: none;
+      }
     }
   

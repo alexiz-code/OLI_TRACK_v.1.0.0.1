@@ -277,41 +277,41 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
               @for (p of service.productos(); track p.id) {
                 <article
-                  class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm flex flex-col justify-between"
+                  class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm flex flex-col"
                 >
                   <div>
                     <div
-                      class="relative h-40 w-full bg-slate-100 flex items-center justify-center text-4xl"
+                      class="relative h-52 w-full bg-gradient-to-br from-sky-50 to-teal-50 flex items-center justify-center"
                     >
                       @if (p.imagenUrl) {
                         <img
                           [src]="service.imagenProductoUrl(p.imagenUrl)"
                           [alt]="p.nombre"
-                          class="w-full h-full object-cover"
+                          class="w-full h-full object-contain p-4"
                         />
                       } @else {
-                        <span class="text-xs font-semibold uppercase tracking-widest text-slate-500">
-                          Producto
+                        <span class="text-sm font-bold uppercase tracking-widest text-slate-400">
+                          Imagen no disponible
                         </span>
                       }
 
                       <span
-                        class="absolute top-2.5 right-2.5 bg-blue-600 text-white text-[11px] font-black px-2.5 py-1 rounded-lg shadow-sm"
+                        class="absolute top-3 right-3 bg-white/95 text-blue-700 text-sm font-black px-3 py-1.5 rounded-xl shadow-sm"
                       >
                         S/. {{ p.precioUnitario.toFixed(2) }}
                       </span>
                     </div>
 
-                    <div class="p-4 space-y-2">
-                      <p class="text-[11px] text-slate-500 font-semibold">
+                    <div class="p-5 space-y-2.5">
+                      <p class="text-[11px] text-teal-700 font-bold uppercase tracking-wide">
                         {{ p.unidadMedida }}
                       </p>
 
-                      <h3 class="font-bold text-sm text-slate-900">
+                      <h3 class="font-bold text-base text-slate-900 break-words">
                         {{ p.nombre }}
                       </h3>
 
-                      <p class="text-xs text-slate-500 line-clamp-2">
+                      <p class="text-sm text-slate-600 whitespace-pre-line break-words leading-relaxed">
                         {{ p.descripcion }}
                       </p>
                       <p
@@ -326,12 +326,12 @@
                     </div>
                   </div>
 
-                  <div class="p-4 pt-0">
+                  <div class="mt-auto p-5 pt-0">
                     <button
                       type="button"
                       (click)="service.addToCart(p, 1)"
                       [disabled]="(p.stockDisponible ?? 0) <= 0"
-                      class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl disabled:cursor-not-allowed disabled:bg-slate-300"
+                      class="w-full py-3 bg-gradient-to-r from-blue-600 to-teal-600 hover:from-blue-700 hover:to-teal-700 text-white font-bold text-sm rounded-xl shadow-sm disabled:cursor-not-allowed disabled:from-slate-300 disabled:to-slate-300"
                     >
                       {{ (p.stockDisponible ?? 0) > 0
                         ? 'Agregar al carrito'

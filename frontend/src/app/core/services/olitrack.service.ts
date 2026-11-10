@@ -134,7 +134,7 @@ export class OlitrackService {
         return 'No hay conexión con el servidor.';
       }
 
-      const body = error.error;
+      const body: unknown = error.error;
 
       if (
         typeof body === 'string' &&
@@ -143,11 +143,55 @@ export class OlitrackService {
         return body;
       }
 
-      return (
-        body?.message ??
-        body?.mensaje ??
-        fallback
-      );
+      if (typeof body === 'object' && body !== null) {
+        const response = body as {
+          message?: unknown;
+          mensaje?: unknown;
+          errores?: unknown;
+        };
+        const mensaje = [
+          response.mensaje,
+          response.message
+        ].find(
+          value => typeof value === 'string' && value.trim()
+        );
+        const errores = Array.isArray(response.errores)
+          ? response.errores.flatMap((item: unknown) => {
+              if (typeof item !== 'object' || item === null) {
+                return [];
+              }
+
+              const detalle = item as {
+                campo?: unknown;
+                mensaje?: unknown;
+              };
+              const campo = typeof detalle.campo === 'string'
+                ? detalle.campo
+                : '';
+              const mensajeCampo = typeof detalle.mensaje === 'string'
+                ? detalle.mensaje
+                : '';
+              const texto = [campo, mensajeCampo]
+                .filter(Boolean)
+                .join(': ');
+
+              return texto ? [texto] : [];
+            })
+          : [];
+
+        if (errores.length > 0) {
+          return [
+            typeof mensaje === 'string' ? mensaje : '',
+            errores.join('; ')
+          ].filter(Boolean).join(': ');
+        }
+
+        if (typeof mensaje === 'string') {
+          return mensaje;
+        }
+      }
+
+      return fallback;
     }
 
     if (error instanceof Error && error.message) {

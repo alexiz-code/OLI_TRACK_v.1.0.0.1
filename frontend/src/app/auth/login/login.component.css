@@ -1,247 +1,173 @@
 
 
-    /* =====================================
-       CONTENEDOR PRINCIPAL
-       ===================================== */
-
     .login-container {
       min-height: 100vh;
-
       display: flex;
-
       justify-content: center;
-
       align-items: center;
-
-      padding: 20px;
-
-      background: #f8fafc;
+      padding: 24px;
+      background:
+        radial-gradient(ellipse at 18% 18%, rgb(191 219 254 / 78%), transparent 32rem),
+        radial-gradient(ellipse at 84% 82%, rgb(153 246 228 / 60%), transparent 30rem),
+        linear-gradient(145deg, #effaff, #f8fafc 54%, #ecfdf5);
     }
-
-
-    /* =====================================
-       TARJETA
-       ===================================== */
 
     .login-card {
       width: 100%;
-
-      max-width: 420px;
-
-      background: white;
-
-      padding: 35px;
-
-      border-radius: 15px;
-
-      box-shadow:
-        0 8px 25px
-        rgba(0, 0, 0, 0.12);
-
+      max-width: 440px;
+      padding: clamp(24px, 6vw, 40px);
+      border: 1px solid rgb(255 255 255 / 85%);
+      border-radius: 28px;
+      background: rgb(255 255 255 / 92%);
+      box-shadow: 0 24px 70px rgb(15 23 42 / 14%);
       box-sizing: border-box;
+      backdrop-filter: blur(14px);
     }
 
+    .volver {
+      display: inline-flex;
+      margin-bottom: 24px;
+      color: #0f766e;
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration: none;
+    }
 
-    /* =====================================
-       TÍTULO
-       ===================================== */
+    .volver:hover {
+      color: #1d4ed8;
+      text-decoration: underline;
+      text-underline-offset: 4px;
+    }
 
     h1 {
       text-align: center;
-
       margin: 0;
-
-      color: #1d4ed8;
-
-      font-size: 32px;
-
+      color: #1e40af;
+      font-size: clamp(30px, 7vw, 38px);
       font-weight: 700;
+      letter-spacing: 0.04em;
     }
 
-
-    /* =====================================
-       SUBTÍTULO
-       ===================================== */
+    .bienvenida {
+      max-width: 300px;
+      margin: 10px auto 28px;
+      color: #64748b;
+      font-size: 14px;
+      line-height: 1.6;
+      text-align: center;
+    }
 
     h2 {
       text-align: center;
-
-      margin: 10px 0 30px;
-
-      color: #333;
-
-      font-size: 24px;
+      margin: 0 0 24px;
+      color: #0f172a;
+      font-size: 23px;
     }
-
-
-    /* =====================================
-       CAMPOS
-       ===================================== */
 
     .campo {
       margin-bottom: 20px;
     }
 
-
-    /* =====================================
-       LABEL
-       ===================================== */
-
     label {
       display: block;
-
-      margin-bottom: 7px;
-
-      font-weight: 600;
-
-      color: #333;
+      margin-bottom: 8px;
+      color: #334155;
+      font-size: 14px;
+      font-weight: 700;
     }
-
-
-    /* =====================================
-       INPUT
-       ===================================== */
 
     input {
       width: 100%;
-
       box-sizing: border-box;
-
-      padding: 12px;
-
-      border: 1px solid #ccc;
-
-      border-radius: 8px;
-
+      padding: 13px 14px;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      background: #f8fafc;
+      color: #0f172a;
       font-size: 15px;
-
       transition:
-        border-color 0.2s ease,
-        box-shadow 0.2s ease;
+        background-color 180ms ease,
+        border-color 180ms ease,
+        box-shadow 180ms ease;
     }
-
 
     input:focus {
       outline: none;
-
-      border-color: #2563eb;
-
-      box-shadow:
-        0 0 0 3px
-        rgba(37, 99, 235, 0.12);
+      border-color: #0d9488;
+      background: #fff;
+      box-shadow: 0 0 0 4px rgb(20 184 166 / 14%);
     }
-
-
-    /* =====================================
-       INPUT CON ERROR
-       ===================================== */
 
     input.ng-invalid.ng-touched {
-      border-color: #d32f2f;
+      border-color: #dc2626;
     }
-
-
-    /* =====================================
-       MENSAJES DE VALIDACIÓN
-       ===================================== */
 
     small {
       display: block;
-
       margin-top: 5px;
-
-      color: #d32f2f;
-
+      color: #b91c1c;
       font-size: 13px;
     }
 
-
-    /* =====================================
-       ERROR GENERAL
-       ===================================== */
-
     .error {
-      color: #d32f2f;
-
-      background: #ffebee;
-
-      border: 1px solid #ffcdd2;
-
-      padding: 10px;
-
-      border-radius: 6px;
-
       margin-bottom: 15px;
-
+      padding: 12px;
+      border: 1px solid #fecaca;
+      border-radius: 12px;
+      background: #fef2f2;
+      color: #b91c1c;
       font-size: 14px;
     }
 
-
-    /* =====================================
-       BOTÓN
-       ===================================== */
-
     button {
       width: 100%;
-
-      padding: 13px;
-
+      padding: 14px;
       border: none;
-
-      border-radius: 8px;
-
-      background: #2563eb;
-
-      color: white;
-
-      font-size: 16px;
-
+      border-radius: 13px;
+      background: linear-gradient(110deg, #2563eb, #0d9488);
+      color: #fff;
+      font-size: 15px;
       font-weight: 600;
-
       cursor: pointer;
-
       transition:
-        background 0.2s ease,
-        opacity 0.2s ease;
+        box-shadow 180ms ease,
+        opacity 180ms ease,
+        transform 180ms ease;
     }
-
 
     button:hover:not(:disabled) {
-      background: #1d4ed8;
+      box-shadow: 0 10px 22px rgb(37 99 235 / 22%);
+      transform: translateY(-1px);
     }
-
 
     button:disabled {
       opacity: 0.6;
-
       cursor: not-allowed;
     }
 
-
-    /* =====================================
-       REGISTRO
-       ===================================== */
-
     .registro {
       text-align: center;
-
-      margin-top: 20px;
-
-      color: #555;
+      margin-top: 22px;
+      color: #64748b;
+      font-size: 14px;
     }
-
 
     .registro a {
-      color: #1976d2;
-
+      color: #0f766e;
       text-decoration: none;
-
       font-weight: 600;
     }
-
 
     .registro a:hover {
       text-decoration: underline;
     }
 
-  
+    @media (max-width: 480px) {
+      .login-container {
+        padding: 16px;
+      }
+
+      .login-card {
+        border-radius: 22px;
+      }
+    }

@@ -35,7 +35,7 @@ public class UsuarioDTO {
         @Size(min = 6, message = "La contraseña debe tener al menos 6 caracteres")
         private String password;
 
-        @Pattern(regexp = "^\\+?[0-9]{6,15}$", message = "El teléfono no tiene un formato válido")
+        @Pattern(regexp = "^(?:\\+?[0-9]{6,15})?$", message = "El teléfono no tiene un formato válido")
         private String telefono;
 
         @NotNull(message = "El rol es obligatorio")
@@ -52,7 +52,7 @@ public class UsuarioDTO {
         @Size(max = 120, message = "El nombre no debe superar 120 caracteres")
         private String nombre;
 
-        @Pattern(regexp = "^\\+?[0-9]{6,15}$", message = "El teléfono no tiene un formato válido")
+        @Pattern(regexp = "^(?:\\+?[0-9]{6,15})?$", message = "El teléfono no tiene un formato válido")
         private String telefono;
     }
 

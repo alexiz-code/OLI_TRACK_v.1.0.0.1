@@ -12,6 +12,7 @@ import {
   ReactiveFormsModule,
   Validators
 } from '@angular/forms';
+import { HttpErrorResponse } from '@angular/common/http';
 
 import { Router, RouterLink } from '@angular/router';
 
@@ -100,7 +101,7 @@ export class RegistroComponent implements OnDestroy {
         nombre: datos.nombre.trim(),
         email: datos.email.trim(),
         password: datos.password,
-        telefono: datos.telefono.trim(),
+        telefono: datos.telefono.trim() || undefined,
         rol: 'CLIENTE'
       });
 
@@ -412,31 +413,16 @@ export class RegistroComponent implements OnDestroy {
         return;
     }
 
-    if (error instanceof Error) {
-      this.error = error.message || 'No se pudo completar el registro.';
+    if (error instanceof HttpErrorResponse) {
+      this.error = this.olitrackService.mensajeError(
+        error,
+        'No se pudo completar el registro.'
+      );
       return;
     }
 
-    if (typeof error === 'object' && error !== null && 'error' in error) {
-      const httpError = (error as {
-        error?: { message?: string; mensaje?: string; error?: string } | string
-      }).error;
-
-      if (typeof httpError === 'string' && httpError.trim()) {
-        this.error = httpError;
-        return;
-      }
-
-      if (typeof httpError === 'object' && httpError !== null) {
-        this.error =
-          httpError.message ||
-          httpError.mensaje ||
-          httpError.error ||
-          'No se pudo completar el registro.';
-        return;
-      }
-    }
-
-    this.error = 'No se pudo completar el registro.';
+    this.error = error instanceof Error && error.message
+      ? error.message
+      : 'No se pudo completar el registro.';
   }
 }

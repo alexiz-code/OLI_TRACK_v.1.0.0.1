@@ -1,12 +1,14 @@
 import {
   Component,
   afterNextRender,
-  inject
+  inject,
+  signal
 } from '@angular/core';
 
 import { HttpClient } from '@angular/common/http';
 
 import { Producto } from '../../core/models/olitrack.models';
+import { OlitrackService } from '../../core/services/olitrack.service';
 import { environment } from '../../../environments/environment';
 
 @Component({
@@ -22,8 +24,9 @@ import { environment } from '../../../environments/environment';
 export class CatalogoComponent {
 
   private readonly http = inject(HttpClient);
+  readonly service = inject(OlitrackService);
 
-  productos: Producto[] = [];
+  readonly productos = signal<Producto[]>([]);
 
   constructor() {
     afterNextRender(() => this.http
@@ -33,7 +36,7 @@ export class CatalogoComponent {
       .subscribe({
 
         next: productos => {
-          this.productos = productos;
+          this.productos.set(productos);
         },
 
         error: error => {

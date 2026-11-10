@@ -148,7 +148,11 @@ public class UsuarioService {
         usuario.setId(userRecord.getUid());
         usuario.setNombre(request.getNombre());
         usuario.setEmail(request.getEmail());
-        usuario.setTelefono(request.getTelefono());
+        usuario.setTelefono(
+                StringUtils.hasText(request.getTelefono())
+                        ? request.getTelefono().trim()
+                        : null
+        );
         usuario.setRol(rol);
         usuario.setActivo(true);
 
