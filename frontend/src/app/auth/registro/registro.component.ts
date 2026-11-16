@@ -4,7 +4,8 @@ import {
   ElementRef,
   OnDestroy,
   ViewChild,
-  inject
+  inject,
+  signal
 } from '@angular/core';
 
 import {
@@ -45,18 +46,31 @@ export class RegistroComponent implements OnDestroy {
   @ViewChild('mapaRegistro')
   private mapaRegistro?: ElementRef<HTMLDivElement>;
 
+  @ViewChild('fotoNegocioInput')
+  private fotoNegocioInput?: ElementRef<HTMLInputElement>;
+
   paso: 1 | 2 = 1;
   cargando = false;
   error = '';
+  errorMapaRegistro = '';
   mensajeCarga = '';
   mostrarMapa = false;
 
   private leaflet?: typeof import('leaflet');
   private mapa?: Leaflet.Map;
   private marcador?: Leaflet.CircleMarker;
+  private observadorTamanoMapa?: ResizeObserver;
+  private generacionMapa = 0;
+  private generacionGeolocalizacion = 0;
   private temporizadorMapa?: ReturnType<typeof setTimeout>;
   private usuarioRegistrado: Usuario | null = null;
   private preparacionAutenticacion: Promise<ResultadoAutenticacionRegistro> | null = null;
+  readonly buscandoUbicacion = signal(false);
+  readonly errorUbicacionActual = signal('');
+  readonly fotoNegocio = signal<File | null>(null);
+  readonly vistaPreviaFotoNegocio = signal<string | null>(null);
+  readonly errorFotoNegocio = signal('');
+  private urlVistaPreviaFotoNegocio: string | null = null;
 
   readonly formCuenta = this.fb.nonNullable.group({
     nombre: ['', Validators.required],
@@ -144,6 +158,7 @@ export class RegistroComponent implements OnDestroy {
     if (this.cargando) return;
 
     this.cerrarMapa();
+    this.quitarFotoNegocio();
     this.error = '';
     this.paso = 1;
     this.usuarioRegistrado = null;
@@ -245,8 +260,10 @@ export class RegistroComponent implements OnDestroy {
 
       console.time('[Registro] Creación del perfil de cliente');
 
-      const cliente =
-        await this.olitrackService.crearClientePerfil(request);
+      const foto = this.fotoNegocio();
+      const cliente = foto
+        ? await this.olitrackService.crearClientePerfilConFoto(request, foto)
+        : await this.olitrackService.crearClientePerfil(request);
 
       console.timeEnd('[Registro] Creación del perfil de cliente');
 
@@ -260,6 +277,7 @@ export class RegistroComponent implements OnDestroy {
       this.mensajeCarga = 'Registro completo. Abriendo tu portal...';
 
       this.cerrarMapa();
+      this.quitarFotoNegocio();
 
       await this.router.navigate(['/cliente']);
     } catch (error: unknown) {
@@ -276,6 +294,7 @@ export class RegistroComponent implements OnDestroy {
     if (this.cargando || this.mostrarMapa) return;
 
     this.mostrarMapa = true;
+    this.errorMapaRegistro = '';
 
     this.temporizadorMapa = setTimeout(() => {
       this.temporizadorMapa = undefined;
@@ -293,54 +312,151 @@ export class RegistroComponent implements OnDestroy {
       return;
     }
 
-    const latitud = Number(this.formNegocio.controls.latitud.value);
-    const longitud = Number(this.formNegocio.controls.longitud.value);
+    const generacion = this.generacionMapa;
 
-    const centroValido =
-      Number.isFinite(latitud) &&
-      Number.isFinite(longitud) &&
-      latitud >= -90 &&
-      latitud <= 90 &&
-      longitud >= -180 &&
-      longitud <= 180;
+    try {
+      const leafletModule = await import('leaflet');
+      const leafletInterop = leafletModule as typeof import('leaflet') & {
+        default?: typeof import('leaflet');
+      };
+      const L = leafletInterop.default ?? leafletModule;
 
-    const L = await import('leaflet');
-    this.leaflet = L;
-
-    const centroInicial: Leaflet.LatLngExpression = centroValido
-      ? [latitud, longitud]
-      : [-13.1635, -74.224];
-
-    this.mapa = L.map(contenedor).setView(centroInicial, 16);
-
-    L.tileLayer(
-      'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-      {
-        maxZoom: 19,
-        attribution: '&copy; OpenStreetMap contributors'
+      if (generacion !== this.generacionMapa || !this.mostrarMapa) return;
+      if (typeof L.map !== 'function') {
+        throw new Error('Leaflet no se inicializó correctamente.');
       }
-    ).addTo(this.mapa);
 
-    this.marcador = L.circleMarker(centroInicial, {
-      radius: 9,
-      color: '#166534',
-      weight: 3,
-      fillColor: '#22c55e',
-      fillOpacity: 0.9
-    }).addTo(this.mapa);
+      const latitud = Number(this.formNegocio.controls.latitud.value);
+      const longitud = Number(this.formNegocio.controls.longitud.value);
+      const centroValido =
+        Number.isFinite(latitud) &&
+        Number.isFinite(longitud) &&
+        latitud >= -90 &&
+        latitud <= 90 &&
+        longitud >= -180 &&
+        longitud <= 180;
 
-    this.marcador.bindTooltip('Ubicación del negocio');
+      this.leaflet = L;
 
-    this.mapa.on('click', (evento: Leaflet.LeafletMouseEvent) => {
-      this.seleccionarUbicacion(
-        evento.latlng.lat,
-        evento.latlng.lng
+      const centroInicial: Leaflet.LatLngExpression = centroValido
+        ? [latitud, longitud]
+        : [-13.1635, -74.224];
+
+      this.mapa = L.map(contenedor).setView(centroInicial, 16);
+
+      L.tileLayer(
+        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        {
+          maxZoom: 19,
+          attribution: '&copy; OpenStreetMap contributors'
+        }
+      ).addTo(this.mapa);
+
+      this.marcador = L.circleMarker(centroInicial, {
+        radius: 9,
+        color: '#166534',
+        weight: 3,
+        fillColor: '#22c55e',
+        fillOpacity: 0.9
+      }).addTo(this.mapa);
+
+      this.marcador.bindTooltip('Ubicación del negocio');
+
+      this.mapa.on('click', (evento: Leaflet.LeafletMouseEvent) => {
+        this.seleccionarUbicacion(
+          evento.latlng.lat,
+          evento.latlng.lng
+        );
+      });
+
+      if (typeof ResizeObserver !== 'undefined') {
+        this.observadorTamanoMapa = new ResizeObserver(() => {
+          this.mapa?.invalidateSize();
+        });
+        this.observadorTamanoMapa.observe(contenedor);
+      }
+
+      requestAnimationFrame(() => this.mapa?.invalidateSize());
+      setTimeout(() => this.mapa?.invalidateSize(), 250);
+    } catch (error) {
+      this.mapa?.remove();
+      this.mapa = undefined;
+      this.marcador = undefined;
+      this.leaflet = undefined;
+      this.errorMapaRegistro =
+        'No se pudo cargar el mapa. Revisa tu conexión e inténtalo de nuevo.';
+      console.error('[Registro] Error inicializando el mapa:', error);
+    }
+  }
+
+  usarUbicacionActual(): void {
+    this.errorUbicacionActual.set('');
+
+    if (typeof window !== 'undefined' && !window.isSecureContext) {
+      this.errorUbicacionActual.set(
+        'La ubicación actual requiere una conexión segura HTTPS.'
       );
-    });
+      return;
+    }
 
-    setTimeout(() => {
-      this.mapa?.invalidateSize();
-    }, 100);
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      this.errorUbicacionActual.set(
+        'Este navegador no permite obtener la ubicación actual.'
+      );
+      return;
+    }
+
+    this.buscandoUbicacion.set(true);
+    const generacion = ++this.generacionGeolocalizacion;
+
+    try {
+      navigator.geolocation.getCurrentPosition(
+        position => {
+          if (generacion !== this.generacionGeolocalizacion) return;
+
+          this.buscandoUbicacion.set(false);
+          const { latitude, longitude } = position.coords;
+          this.seleccionarUbicacion(latitude, longitude);
+          this.mapa?.setView([latitude, longitude], 17);
+        },
+        error => {
+          if (generacion !== this.generacionGeolocalizacion) return;
+
+          this.buscandoUbicacion.set(false);
+          this.errorUbicacionActual.set(
+            this.mensajeErrorGeolocalizacion(error)
+          );
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 15_000,
+          maximumAge: 60_000
+        }
+      );
+    } catch (error) {
+      if (generacion !== this.generacionGeolocalizacion) return;
+
+      this.buscandoUbicacion.set(false);
+      this.errorUbicacionActual.set(
+        'No se pudo solicitar la ubicación actual.'
+      );
+      console.error('[Registro] Error solicitando ubicación:', error);
+    }
+  }
+
+  private mensajeErrorGeolocalizacion(
+    error: GeolocationPositionError
+  ): string {
+    switch (error.code) {
+      case error.PERMISSION_DENIED:
+        return 'Permite el acceso a la ubicación en tu navegador para continuar.';
+      case error.POSITION_UNAVAILABLE:
+        return 'No se pudo determinar tu ubicación. Revisa el GPS o la señal.';
+      case error.TIMEOUT:
+        return 'La búsqueda de ubicación tardó demasiado. Inténtalo otra vez.';
+      default:
+        return 'No se pudo obtener tu ubicación actual.';
+    }
   }
 
   private seleccionarUbicacion(
@@ -363,14 +479,69 @@ export class RegistroComponent implements OnDestroy {
     });
   }
 
+  seleccionarFotoNegocio(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const archivo = input.files?.[0];
+    this.errorFotoNegocio.set('');
+
+    if (!archivo) return;
+
+    this.revocarVistaPreviaFotoNegocio();
+    this.fotoNegocio.set(null);
+
+    const tiposPermitidos = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!tiposPermitidos.includes(archivo.type)) {
+      this.errorFotoNegocio.set('Selecciona una foto JPG, PNG o WEBP.');
+      input.value = '';
+      return;
+    }
+
+    if (archivo.size === 0 || archivo.size > 5 * 1024 * 1024) {
+      this.errorFotoNegocio.set(
+        'La foto debe tener contenido y no superar 5 MB.'
+      );
+      input.value = '';
+      return;
+    }
+
+    this.fotoNegocio.set(archivo);
+    this.urlVistaPreviaFotoNegocio = URL.createObjectURL(archivo);
+    this.vistaPreviaFotoNegocio.set(this.urlVistaPreviaFotoNegocio);
+  }
+
+  quitarFotoNegocio(): void {
+    this.revocarVistaPreviaFotoNegocio();
+    this.fotoNegocio.set(null);
+    this.vistaPreviaFotoNegocio.set(null);
+    this.errorFotoNegocio.set('');
+    if (this.fotoNegocioInput) {
+      this.fotoNegocioInput.nativeElement.value = '';
+    }
+  }
+
+  private revocarVistaPreviaFotoNegocio(): void {
+    if (this.urlVistaPreviaFotoNegocio) {
+      URL.revokeObjectURL(this.urlVistaPreviaFotoNegocio);
+      this.urlVistaPreviaFotoNegocio = null;
+    }
+    this.vistaPreviaFotoNegocio.set(null);
+  }
+
   cerrarMapa(): void {
     this.mostrarMapa = false;
+    this.errorMapaRegistro = '';
+    this.generacionMapa++;
+    this.generacionGeolocalizacion++;
+    this.buscandoUbicacion.set(false);
+    this.errorUbicacionActual.set('');
 
     if (this.temporizadorMapa !== undefined) {
       clearTimeout(this.temporizadorMapa);
       this.temporizadorMapa = undefined;
     }
 
+    this.observadorTamanoMapa?.disconnect();
+    this.observadorTamanoMapa = undefined;
     this.mapa?.remove();
     this.mapa = undefined;
     this.marcador = undefined;
@@ -378,6 +549,7 @@ export class RegistroComponent implements OnDestroy {
 
   ngOnDestroy(): void {
     this.cerrarMapa();
+    this.revocarVistaPreviaFotoNegocio();
   }
 
   // MENSAJES DE ERROR

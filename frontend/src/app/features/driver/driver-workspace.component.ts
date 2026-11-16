@@ -1,5 +1,6 @@
 import {
   Component,
+  OnDestroy,
   OnInit,
   computed,
   inject,
@@ -17,6 +18,7 @@ import { NavbarComponent } from '../../shared/components/navbar/navbar.component
 import { AyacuchoMapComponent } from '../../shared/components/map/ayacucho-map.component';
 
 import {
+  Cliente,
   Pedido,
   TipoIncidencia,
   EstadoRepartidor
@@ -35,7 +37,7 @@ import {
 
   templateUrl: './driver-workspace.component.html'
 })
-export class DriverWorkspaceComponent implements OnInit {
+export class DriverWorkspaceComponent implements OnInit, OnDestroy {
 
   readonly service =
     inject(OlitrackService);
@@ -70,6 +72,9 @@ export class DriverWorkspaceComponent implements OnInit {
     signal<Pedido | null>(null);
 
   readonly perfilRepartidorFaltante = signal(false);
+  readonly fotoNegocioVisible = signal<{ clienteId: string; url: string } | null>(null);
+  readonly cargandoFotoNegocioId = signal<string | null>(null);
+  private fotoNegocioObjectUrl: string | null = null;
 
   readonly tiposIncidencia: {
     value: TipoIncidencia;
@@ -128,6 +133,49 @@ export class DriverWorkspaceComponent implements OnInit {
 
   }
 
+  ngOnDestroy(): void {
+    this.limpiarFotoNegocioVisible();
+  }
+
+  clienteParaPedido(pedido: Pedido): Cliente | undefined {
+    return this.service.clientes().find(cliente => cliente.id === pedido.clienteId);
+  }
+
+  async alternarFotoNegocio(cliente: Cliente): Promise<void> {
+    if (this.fotoNegocioVisible()?.clienteId === cliente.id) {
+      this.limpiarFotoNegocioVisible();
+      return;
+    }
+    if (this.cargandoFotoNegocioId()) return;
+
+    this.cargandoFotoNegocioId.set(cliente.id);
+    try {
+      const foto = await this.service.obtenerFotoNegocio(cliente.id);
+      this.limpiarFotoNegocioVisible();
+      this.fotoNegocioObjectUrl = URL.createObjectURL(foto);
+      this.fotoNegocioVisible.set({
+        clienteId: cliente.id,
+        url: this.fotoNegocioObjectUrl
+      });
+    } catch (error) {
+      console.error('No se pudo cargar la foto del negocio:', error);
+      this.service.triggerToast(
+        'ERROR',
+        'No se pudo cargar la foto del negocio',
+        this.service.mensajeError(error, 'Intenta nuevamente más tarde.')
+      );
+    } finally {
+      this.cargandoFotoNegocioId.set(null);
+    }
+  }
+
+  private limpiarFotoNegocioVisible(): void {
+    if (this.fotoNegocioObjectUrl) {
+      URL.revokeObjectURL(this.fotoNegocioObjectUrl);
+      this.fotoNegocioObjectUrl = null;
+    }
+    this.fotoNegocioVisible.set(null);
+  }
 
   puedeAceptar(p: Pedido): boolean {
 

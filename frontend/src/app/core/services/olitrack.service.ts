@@ -24,7 +24,7 @@ import {
   EstadoIncidencia, Consulta, Notificacion, CartItem, ToastMessage, ClienteActualizarRequest,
   DireccionCrearRequest, DashboardResponse, Productividad, Zona, ZonaRequest, ConfiguracionEmpresa,
   AuditLog, Promocion, PromocionRequest, Faq, FaqRequest, AlertasResponse, ResetLinkResponse,
-  UsuarioActualizarRequest
+  UsuarioActualizarRequest, ClienteCrearRequest
 } from '../models/olitrack.models';
 
 import { environment } from '../../../environments/environment';
@@ -851,21 +851,21 @@ export class OlitrackService {
     );
   }
 
+  obtenerFotoNegocio(clienteId: string): Promise<Blob> {
+    return firstValueFrom(
+      this.http.get(
+        `${this.base}/clientes/${encodeURIComponent(clienteId)}/foto-negocio`,
+        { responseType: 'blob' }
+      )
+    );
+  }
+
 
 // ============================================================
 // CREAR PERFIL DE CLIENTE
 // ============================================================
 
-async crearClientePerfil(request: {
-  usuarioId: string;
-  nombreNegocio: string;
-  direccion: string;
-  referencia?: string;
-  ubicacion: {
-    latitud: number;
-    longitud: number;
-  };
-}): Promise<Cliente> {
+async crearClientePerfil(request: ClienteCrearRequest): Promise<Cliente> {
 
   console.log(
     '[OlitrackService] Creando perfil de cliente...',
@@ -898,6 +898,32 @@ async crearClientePerfil(request: {
       error
     );
 
+    throw error;
+  }
+}
+
+async crearClientePerfilConFoto(
+  request: ClienteCrearRequest,
+  foto: File
+): Promise<Cliente> {
+  const formData = new FormData();
+  formData.append(
+    'datos',
+    new Blob([JSON.stringify(request)], { type: 'application/json' })
+  );
+  formData.append('foto', foto, foto.name);
+
+  try {
+    const cliente = await firstValueFrom(
+      this.http.post<Cliente>(`${this.base}/clientes`, formData)
+    );
+    this.clienteProfile.set(cliente);
+    return cliente;
+  } catch (error) {
+    console.error(
+      '[OlitrackService] Error creando perfil con foto del negocio:',
+      error
+    );
     throw error;
   }
 }

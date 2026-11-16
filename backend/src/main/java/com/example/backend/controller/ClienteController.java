@@ -1,11 +1,19 @@
 package com.example.backend.controller;
 
 import com.example.backend.dto.ClienteDTO;
+import com.example.backend.exception.ApiException;
 import com.example.backend.security.SecurityContextUtils;
 import com.example.backend.service.ClienteService;
 import jakarta.validation.Valid;
+import org.springframework.core.io.buffer.DataBufferLimitException;
+import org.springframework.core.io.buffer.DataBufferUtils;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,14 +21,19 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.nio.charset.StandardCharsets;
+
 @RestController
 @RequestMapping("/api/clientes")
 public class ClienteController {
+
+    private static final int FOTO_MAX_BYTES = 5 * 1024 * 1024;
 
     private final ClienteService clienteService;
 
@@ -35,6 +48,66 @@ public class ClienteController {
         return SecurityContextUtils.usuarioActual()
                 .flatMap(actual -> clienteService.crear(actual.getUid(), request))
                 .map(dto -> ResponseEntity.status(HttpStatus.CREATED).body(dto));
+    }
+
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('CLIENTE')")
+    public Mono<ResponseEntity<ClienteDTO.Response>> crearConFotoNegocio(
+            @Valid @RequestPart("datos") ClienteDTO.CrearRequest request,
+            @RequestPart("foto") FilePart foto) {
+        if (foto.headers().getContentLength() > FOTO_MAX_BYTES) {
+            return Mono.error(new ApiException(
+                    HttpStatus.PAYLOAD_TOO_LARGE,
+                    "La foto no puede superar 5 MB"));
+        }
+
+        return DataBufferUtils.join(foto.content(), FOTO_MAX_BYTES + 1)
+                .onErrorMap(
+                        DataBufferLimitException.class,
+                        error -> new ApiException(
+                                HttpStatus.PAYLOAD_TOO_LARGE,
+                                "La foto no puede superar 5 MB"))
+                .map(buffer -> {
+                    try {
+                        if (buffer.readableByteCount() > FOTO_MAX_BYTES) {
+                            throw new ApiException(
+                                    HttpStatus.PAYLOAD_TOO_LARGE,
+                                    "La foto no puede superar 5 MB");
+                        }
+                        byte[] bytes = new byte[buffer.readableByteCount()];
+                        buffer.read(bytes);
+                        return bytes;
+                    } finally {
+                        DataBufferUtils.release(buffer);
+                    }
+                })
+                .flatMap(bytes -> SecurityContextUtils.usuarioActual()
+                        .flatMap(actual -> clienteService.crearConFotoNegocio(
+                                actual.getUid(),
+                                request,
+                                bytes,
+                                foto.headers().getContentType() != null
+                                        ? foto.headers().getContentType().toString()
+                                        : "application/octet-stream"))
+                        .map(dto -> ResponseEntity.status(HttpStatus.CREATED).body(dto)));
+    }
+
+    @GetMapping("/{id}/foto-negocio")
+    @PreAuthorize("hasAnyRole('CLIENTE', 'ADMINISTRADOR', 'SUPERVISOR', 'REPARTIDOR')")
+    public Mono<ResponseEntity<byte[]>> obtenerFotoNegocio(@PathVariable String id) {
+        return SecurityContextUtils.usuarioActual()
+                .flatMap(actual -> clienteService.obtenerFotoNegocio(
+                        id, actual.getUid(), actual.getRol()))
+                .map(foto -> ResponseEntity.ok()
+                        .contentType(MediaType.parseMediaType(foto.contentType()))
+                        .cacheControl(CacheControl.noStore())
+                        .header(HttpHeaders.CONTENT_DISPOSITION,
+                                ContentDisposition.inline()
+                                        .filename("foto-negocio", StandardCharsets.UTF_8)
+                                        .build()
+                                        .toString())
+                        .header("X-Content-Type-Options", "nosniff")
+                        .body(foto.contenido()));
     }
 
     @GetMapping

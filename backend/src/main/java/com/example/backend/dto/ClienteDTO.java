@@ -99,5 +99,6 @@ public class ClienteDTO {
         private Date creadoEn;
         private List<DireccionDTO> direccionesAdicionales;
         private Date ultimoPedidoEn;
+        private String fotoNegocioUrl;
     }
 }

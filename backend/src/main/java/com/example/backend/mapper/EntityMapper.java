@@ -82,7 +82,7 @@ public class EntityMapper {
         if (model == null) {
             return null;
         }
-        return new ClienteDTO.Response(
+        ClienteDTO.Response response = new ClienteDTO.Response(
                 model.getId(),
                 model.getUsuarioId(),
                 model.getNombreNegocio(),
@@ -92,8 +92,14 @@ public class EntityMapper {
                 model.isActivo(),
                 model.getCreadoEn(),
                 toDireccionesDTO(model.getDireccionesAdicionales()),
+                null,
                 null
         );
+        if (model.getFotoNegocioStoragePath() != null
+                && !model.getFotoNegocioStoragePath().isBlank()) {
+            response.setFotoNegocioUrl("/api/clientes/" + model.getId() + "/foto-negocio");
+        }
+        return response;
     }
 
     public List<ClienteDTO.DireccionDTO> toDireccionesDTO(List<com.example.backend.model.DireccionGuardada> lista) {

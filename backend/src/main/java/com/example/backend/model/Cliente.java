@@ -31,6 +31,7 @@ public class Cliente implements EntidadFirestore {
     private String nombreNegocio;
     private String direccion;
     private String referencia;
+    private String fotoNegocioStoragePath;
 
     /** Ubicación del local del cliente (para calcular rutas y distancias en Angular). */
     private Ubicacion ubicacion;

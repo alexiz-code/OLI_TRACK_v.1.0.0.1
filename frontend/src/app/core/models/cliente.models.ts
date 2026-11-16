@@ -19,6 +19,7 @@ export interface Cliente {
   creadoEn: string;
   direccionesAdicionales: DireccionGuardada[];
   ultimoPedidoEn?: string | null;
+  fotoNegocioUrl?: string | null;
 }
 
 export interface ClienteCrearRequest {
