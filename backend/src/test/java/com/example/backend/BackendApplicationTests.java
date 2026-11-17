@@ -9,7 +9,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-@SpringBootTest
+@SpringBootTest(properties = {
+        "osrm.base-url=http://localhost:5000",
+        "osrm.iam-enabled=false"
+})
 class BackendApplicationTests {
 
     @MockitoBean(name = "googleCredentials")
