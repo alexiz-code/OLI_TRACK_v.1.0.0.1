@@ -1,100 +1,4 @@
 
-    @if (routingEnabled()) {
-      <section class="mb-3 space-y-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <label class="block text-xs font-semibold text-slate-700">
-            Cliente
-            <select
-              [value]="clienteRutaId() ?? selectedClienteId() ?? ''"
-              (change)="seleccionarClienteRuta($event)"
-              class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-            >
-              <option value="">Selecciona un cliente</option>
-              @for (cliente of clientes(); track cliente.id) {
-                <option [value]="cliente.id">{{ cliente.nombreNegocio }}</option>
-              }
-            </select>
-          </label>
-
-          <label class="block text-xs font-semibold text-slate-700">
-            Origen
-            <select
-              [value]="repartidorRutaId() ?? selectedRepartidorId() ?? ''"
-              (change)="seleccionarRepartidorRuta($event)"
-              class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-            >
-              <option value="">Planta central</option>
-              @for (repartidor of repartidoresConUbicacion(); track repartidor.id) {
-                <option [value]="repartidor.id">
-                  {{ repartidor.nombreUsuario || repartidor.placaVehiculo }} · {{ repartidor.estado }}
-                </option>
-              }
-            </select>
-          </label>
-        </div>
-
-        <div class="flex flex-wrap gap-2">
-          <button
-            type="button"
-            (click)="calcularRuta()"
-            [disabled]="cargandoRuta() || !clienteSeleccionadoParaRuta()?.ubicacion"
-            class="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {{ cargandoRuta() ? 'Calculando…' : 'Ver ruta por calles' }}
-          </button>
-          <button
-            type="button"
-            (click)="buscarRepartidorCercano()"
-            [disabled]="cargandoRuta() || !clienteSeleccionadoParaRuta()?.ubicacion"
-            class="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Comparar repartidores por tiempo
-          </button>
-        </div>
-
-        @if (errorRuta()) {
-          <p role="alert" class="rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
-            {{ errorRuta() }}
-          </p>
-        }
-
-        @if (rutaActual(); as ruta) {
-          <p class="text-sm font-semibold text-slate-800" aria-live="polite">
-            Ruta por calles: {{ ruta.distanciaKm | number:'1.1-2' }} km ·
-            {{ ruta.duracionMinutos | number:'1.0-0' }} min
-          </p>
-        }
-
-        @if (comparacionRepartidores(); as comparacion) {
-          <div class="space-y-1 border-t border-slate-100 pt-2" aria-live="polite">
-            <p class="text-xs font-bold text-slate-800">
-              Menor tiempo estimado por carretera
-              @if (comparacion.repartidorRecomendadoId; as recomendadoId) {
-                · {{ nombreRepartidor(recomendadoId) }}
-              }
-            </p>
-            @for (resultado of comparacion.repartidores; track resultado.repartidorId) {
-              <p class="text-xs text-slate-600">
-                {{ nombreRepartidor(resultado.repartidorId) }}:
-                @if (resultado.duracionMinutos !== null) {
-                  {{ resultado.duracionMinutos | number:'1.0-0' }} min ·
-                  {{ resultado.distanciaKm | number:'1.1-2' }} km
-                } @else {
-                  sin ruta disponible
-                }
-                @if (resultado.repartidorId === comparacion.repartidorRecomendadoId) {
-                  <span class="font-bold text-emerald-700">(menor tiempo)</span>
-                }
-              </p>
-            }
-            <p class="text-[11px] text-slate-500">
-              Es una recomendación; no asigna ni modifica pedidos.
-            </p>
-          </div>
-        }
-      </section>
-    }
-
     <div
       class="relative rounded-2xl overflow-hidden border border-slate-200
              shadow-sm bg-slate-100 w-full"
@@ -160,21 +64,6 @@
         [style.height]="height()"
         class="w-full z-10"
       ></div>
-
-      @if (cargandoRutasActivas() && !errorRutasActivas()) {
-        <p class="absolute bottom-14 left-3 z-[400] rounded-lg bg-white/95 px-3 py-2 text-xs text-slate-600 shadow" role="status" aria-live="polite">
-          Calculando rutas por calles…
-        </p>
-      }
-
-      @if (errorRutasActivas()) {
-        <div class="absolute bottom-14 left-3 z-[400] flex max-w-[85%] items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 shadow" role="alert">
-          <span>{{ errorRutasActivas() }}</span>
-          <button type="button" class="shrink-0 underline" (click)="refrescarRutasActivas()">
-            Reintentar
-          </button>
-        </div>
-      }
 
       @if (showLegend()) {
         <!-- LEYENDA -->
@@ -248,8 +137,8 @@
 
         @if (tienePedidosAsignados()) {
           <div class="flex items-center gap-1.5">
-            <span class="h-0.5 w-5 border-t-2 border-blue-600"></span>
-            <span class="text-slate-700 font-medium">Ruta por calles</span>
+            <span class="h-0.5 w-5 border-t-2 border-dashed border-blue-600"></span>
+            <span class="text-slate-700 font-medium">Ruta aproximada</span>
           </div>
         }
 
