@@ -1,7 +1,9 @@
 export const environment = {
   production: false,
 
-  apiUrl: 'http://localhost:8080/api',
+  apiUrl: typeof window === 'undefined'
+    ? 'http://localhost:8080/api'
+    : '/api',
 
   firebase: {
     apiKey: "AIzaSyCC6skTHtXgWKqMIY_AbEKkD9amGb3-XYY",
