@@ -9,9 +9,9 @@ y duración. No se debe configurar el navegador para llamar a OSRM.
 
 El `frontend/firebase.json` existente ya reescribe `/api/**` al servicio
 `oli-track-v-1-0-0-1-git` en `us-central1`. Esa configuración no se cambió.
-Los entornos staging nuevos usan credenciales Firebase de marcador de posición y
-no se deben publicar hasta reemplazarlas por un proyecto de pruebas real y definir
-un backend staging independiente.
+No hay un entorno staging habilitado: no se proporcionaron un proyecto Firebase
+de pruebas ni un backend staging. No compiles ni publiques un staging con la
+configuración de producción o con claves de marcador de posición.
 
 ## Ejecución local
 
@@ -109,7 +109,6 @@ mvn test
 # Desde frontend
 npm test -- --watch=false
 npm run build
-npm run build -- --configuration staging
 ```
 
 Después de revisar la identidad actual del backend, autorizar y publicar primero
