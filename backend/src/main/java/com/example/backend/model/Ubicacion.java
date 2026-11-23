@@ -19,4 +19,10 @@ public class Ubicacion {
     private Double latitud;
     private Double longitud;
     private Date actualizadoEn;
+
+    public Ubicacion(Double latitud, Double longitud) {
+        this.latitud = latitud;
+        this.longitud = longitud;
+        this.actualizadoEn = new Date();
+    }
 }

@@ -65,7 +65,7 @@ const USUARIO_VACIO = (): UsuarioForm => ({
   email: '',
   password: '',
   telefono: '',
-  rol: 'CLIENTE',
+  rol: 'SUPERVISOR',
   placaVehiculo: ''
 });
 
@@ -178,10 +178,6 @@ export class AdminDashboardComponent {
     {
       value: 'SUPERVISOR',
       label: 'Supervisor'
-    },
-    {
-      value: 'CLIENTE',
-      label: 'Cliente'
     },
     {
       value: 'REPARTIDOR',
@@ -724,6 +720,44 @@ export class AdminDashboardComponent {
       true
     );
 
+  }
+
+  async confirmarDesactivarUsuario(usuario: Usuario): Promise<void> {
+    const actual = this.service.currentUser();
+    if (actual?.id === usuario.id) {
+      this.service.triggerToast(
+        'WARNING',
+        'Acción no permitida',
+        'No puedes desactivar tu propia cuenta activa.'
+      );
+      return;
+    }
+    if (!window.confirm(
+      `¿Eliminar o desactivar a ${usuario.nombre}?\nCorreo: ${usuario.email}\nRol: ${usuario.rol}`
+    )) {
+      return;
+    }
+    try {
+      await this.service.desactivarUsuario(usuario.id);
+    } catch (error) {
+      this.service.triggerToast(
+        'ERROR',
+        'No se pudo desactivar el usuario',
+        this.service.mensajeError(error, 'Intenta nuevamente.')
+      );
+    }
+  }
+
+  async reactivarUsuario(usuario: Usuario): Promise<void> {
+    try {
+      await this.service.reactivarUsuario(usuario.id);
+    } catch (error) {
+      this.service.triggerToast(
+        'ERROR',
+        'No se pudo reactivar el usuario',
+        this.service.mensajeError(error, 'Intenta nuevamente.')
+      );
+    }
   }
 
   cerrarModalUsuario(): void {

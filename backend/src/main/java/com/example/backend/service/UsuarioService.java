@@ -7,6 +7,7 @@ import com.example.backend.mapper.EntityMapper;
 import com.example.backend.model.Rol;
 import com.example.backend.model.Usuario;
 import com.example.backend.repository.UsuarioRepository;
+import com.example.backend.security.SecurityContextUtils;
 import com.example.backend.util.ReactiveFirebase;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.UserRecord;
@@ -77,6 +78,11 @@ public class UsuarioService {
         Rol rol = rolForzado != null
                 ? rolForzado
                 : request.getRol();
+        if (rolForzado == null && rol == Rol.CLIENTE) {
+            return Mono.error(new OperacionInvalidaException(
+                    "Los clientes deben registrarse mediante el formulario público."
+            ));
+        }
 
         return usuarioRepository
                 .findByEmail(request.getEmail())
@@ -302,53 +308,36 @@ public class UsuarioService {
      */
     public Mono<Void> desactivar(String id) {
 
-        return usuarioRepository
-                .findById(id)
-
-                .switchIfEmpty(
-                        Mono.error(
-                                RecursoNoEncontradoException.de(
-                                        "Usuario",
-                                        id
-                                )
-                        )
-                )
-
-                .flatMap(
-                        usuario -> {
-
-                            usuario.setActivo(false);
-
-                            return usuarioRepository.save(
-                                    usuario
-                            );
-                        }
-                )
-
-                .flatMap(
-                        usuario ->
-                                ReactiveFirebase.defer(
-                                                () ->
-                                                        firebaseAuth.updateUserAsync(
-                                                                new UserRecord
-                                                                        .UpdateRequest(
-                                                                        usuario.getId()
-                                                                )
-                                                                        .setDisabled(true)
-                                                        )
-                                        )
-
-                                        .then(
-                                                auditService.registrarActual(
-                                                        "USUARIO_DESACTIVADO",
-                                                        "usuario",
-                                                        usuario.getId(),
-                                                        usuario.getEmail()
-                                                )
-                                        )
-                )
-
-                .then();
+        return SecurityContextUtils.usuarioActual()
+                .flatMap(actual -> {
+                    if (actual.getUid().equals(id)) {
+                        return Mono.error(new OperacionInvalidaException(
+                                "No puedes desactivar tu propia cuenta activa."
+                        ));
+                    }
+                    return usuarioRepository
+                            .findById(id)
+                            .switchIfEmpty(Mono.error(
+                                    RecursoNoEncontradoException.de("Usuario", id)
+                            ))
+                            .flatMap(usuario -> {
+                                usuario.setActivo(false);
+                                return usuarioRepository.save(usuario);
+                            })
+                            .flatMap(usuario -> ReactiveFirebase.defer(
+                                            () -> firebaseAuth.updateUserAsync(
+                                                    new UserRecord.UpdateRequest(usuario.getId())
+                                                            .setDisabled(true)
+                                            )
+                                    )
+                                    .then(auditService.registrarActual(
+                                            "USUARIO_DESACTIVADO",
+                                            "usuario",
+                                            usuario.getId(),
+                                            usuario.getEmail()
+                                    )))
+                            .then();
+                });
     }
 
     public Mono<Void> reactivar(String id) {
@@ -371,6 +360,12 @@ public class UsuarioService {
     public Mono<UsuarioDTO.Response> cambiarRol(
             String id,
             Rol nuevoRol) {
+
+        if (nuevoRol == Rol.CLIENTE) {
+            return Mono.error(new OperacionInvalidaException(
+                    "No se puede asignar el rol CLIENTE desde la administración."
+            ));
+        }
 
         return usuarioRepository
                 .findById(id)

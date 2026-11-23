@@ -12,6 +12,8 @@ import com.example.backend.repository.DetallePedidoRepository;
 import com.example.backend.repository.PedidoRepository;
 import com.example.backend.repository.ProductoRepository;
 import com.example.backend.repository.RepartidorRepository;
+import com.example.backend.repository.VehiculoRepository;
+import com.example.backend.repository.InventarioVehiculoRepository;
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.Storage;
 import org.junit.jupiter.api.BeforeEach;
@@ -63,6 +65,12 @@ class PedidoEvidenciaTest {
     IncidenciaService incidenciaService;
 
     @Mock
+    VehiculoRepository vehiculoRepository;
+
+    @Mock
+    InventarioVehiculoRepository inventarioVehiculoRepository;
+
+    @Mock
     Storage storage;
 
     @Mock
@@ -87,6 +95,8 @@ class PedidoEvidenciaTest {
                 notificacionService,
                 configuracionService,
                 incidenciaService,
+                vehiculoRepository,
+                inventarioVehiculoRepository,
                 storage,
                 firebaseProperties,
                 mapper);

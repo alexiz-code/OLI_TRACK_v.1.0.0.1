@@ -623,6 +623,21 @@ export class OlitrackService {
     );
   }
 
+  async reactivarUsuario(
+    usuarioId: string
+  ): Promise<void> {
+    await this.patch(
+      `/usuarios/${usuarioId}/reactivar`,
+      {}
+    );
+    await this.reloadUsuarios();
+    this.triggerToast(
+      'SUCCESS',
+      'Usuario reactivado',
+      'El usuario ya puede iniciar sesión nuevamente.'
+    );
+  }
+
   async cambiarRolUsuario(
     usuarioId: string,
     rol: Rol
@@ -849,6 +864,50 @@ export class OlitrackService {
         '/clientes'
       )
     );
+  }
+
+  async listarVehiculos(): Promise<any[]> {
+    return this.get<any[]>('/vehiculos');
+  }
+
+  async crearVehiculo(request: {
+    placa: string;
+    descripcion?: string;
+    repartidorId?: string;
+  }): Promise<any> {
+    return this.post<any>('/vehiculos', request);
+  }
+
+  async cargarStockVehiculo(
+    vehiculoId: string,
+    request: {
+      productoId: string;
+      cantidad: number;
+      motivo?: string;
+    }
+  ): Promise<any> {
+    return this.post<any>(`/vehiculos/${encodeURIComponent(vehiculoId)}/stock/carga`, request);
+  }
+
+  async crearVentaLibre(request: {
+    productoId: string;
+    cantidad: number;
+    referenciaComprador?: string;
+    metodoPago: 'EFECTIVO' | 'YAPE' | 'PLIN' | 'TRANSFERENCIA';
+    ubicacionVenta?: {
+      latitud: number;
+      longitud: number;
+    };
+  }): Promise<any> {
+    return this.post<any>('/ventas-libres', request);
+  }
+
+  async misVentasLibres(): Promise<any[]> {
+    return this.get<any[]>('/ventas-libres/mis-ventas');
+  }
+
+  async listarVentasLibres(): Promise<any[]> {
+    return this.get<any[]>('/ventas-libres');
   }
 
   obtenerFotoNegocio(clienteId: string): Promise<Blob> {
@@ -1188,6 +1247,35 @@ async reloadClienteProfile(): Promise<void> {
         params
       )
     );
+  }
+
+  async crearPedidoRapido(
+    clienteId: string,
+    data: {
+      direccionEntrega: string;
+      ubicacionEntrega?: {
+        latitud: number;
+        longitud: number;
+      };
+      observaciones?: string;
+      metodoPago: 'EFECTIVO' | 'YAPE' | 'PLIN' | 'TRANSFERENCIA';
+      productos: Array<{
+        productoId: string;
+        cantidad: number;
+      }>;
+    }
+  ): Promise<Pedido> {
+    const pedido = await this.post<Pedido>(
+      `/pedidos/rapido/${encodeURIComponent(clienteId)}`,
+      data
+    );
+    this.pedidos.update(prev => [pedido, ...prev]);
+    this.triggerToast(
+      'SUCCESS',
+      'Pedido rápido creado',
+      `Pedido registrado para el cliente seleccionado. Total: S/. ${pedido.total.toFixed(2)}`
+    );
+    return pedido;
   }
 
   async reloadMisPedidos(): Promise<void> {

@@ -65,6 +65,19 @@ public class PedidoController {
     // ============================================================
 
     /**
+     * Crear un pedido rápido para un cliente registrado.
+     * Solo administrador y supervisor pueden seleccionar el cliente.
+     */
+    @PostMapping("/rapido/{clienteId}")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'SUPERVISOR')")
+    public Mono<ResponseEntity<PedidoDTO.Response>> crearRapido(
+            @PathVariable String clienteId,
+            @Valid @RequestBody PedidoDTO.CrearRequest request) {
+        return pedidoService.crear(clienteId, request)
+                .map(dto -> ResponseEntity.status(HttpStatus.CREATED).body(dto));
+    }
+
+    /**
      * Crea un pedido para el cliente autenticado.
      * El clienteId se obtiene del perfil vinculado al usuario autenticado.
      */

@@ -27,6 +27,8 @@ import com.example.backend.repository.DetallePedidoRepository;
 import com.example.backend.repository.PedidoRepository;
 import com.example.backend.repository.ProductoRepository;
 import com.example.backend.repository.RepartidorRepository;
+import com.example.backend.repository.VehiculoRepository;
+import com.example.backend.repository.InventarioVehiculoRepository;
 import com.example.backend.security.SecurityContextUtils;
 import com.example.backend.security.UsuarioAutenticado;
 import com.google.cloud.storage.Blob;
@@ -87,6 +89,8 @@ public class PedidoService {
     private final NotificacionService notificacionService;
     private final ConfiguracionService configuracionService;
     private final IncidenciaService incidenciaService;
+    private final VehiculoRepository vehiculoRepository;
+    private final InventarioVehiculoRepository inventarioVehiculoRepository;
 
     private final Storage storage;
     private final String storageBucketName;
@@ -103,6 +107,8 @@ public class PedidoService {
                          NotificacionService notificacionService,
                          ConfiguracionService configuracionService,
                          IncidenciaService incidenciaService,
+                         VehiculoRepository vehiculoRepository,
+                         InventarioVehiculoRepository inventarioVehiculoRepository,
                          Storage storage,
                          FirebaseProperties firebaseProperties,
                          EntityMapper mapper) {
@@ -116,6 +122,8 @@ public class PedidoService {
         this.notificacionService = notificacionService;
         this.configuracionService = configuracionService;
         this.incidenciaService = incidenciaService;
+        this.vehiculoRepository = vehiculoRepository;
+        this.inventarioVehiculoRepository = inventarioVehiculoRepository;
         this.storage = storage;
         this.storageBucketName = firebaseProperties.getStorageBucket();
         this.mapper = mapper;
@@ -559,7 +567,8 @@ public class PedidoService {
                                         );
 
                                         return pedidoRepository.save(pedido)
-                                                .flatMap(guardado -> liberarRepartidorSiLibre(anterior)
+                                                .flatMap(guardado -> reservarStockVehiculo(guardado)
+                                                        .then(liberarRepartidorSiLibre(anterior))
                                                         .thenReturn(guardado))
                                                 .onErrorResume(error -> liberarRepartidorSiLibre(repartidorId)
                                                         .then(Mono.error(error)));
@@ -875,9 +884,15 @@ public class PedidoService {
     }
 
     private Mono<Pedido> aplicarEfectosSecundarios(Pedido pedido, EstadoPedido nuevoEstado) {
-        Mono<Void> movimientoStock = nuevoEstado == EstadoPedido.CANCELADO
-                ? reponerStock(pedido)
-                : Mono.empty();
+        Mono<Void> movimientoStock;
+        if (nuevoEstado == EstadoPedido.CANCELADO) {
+            movimientoStock = reponerStock(pedido)
+                    .then(inventarioVehiculoRepository.liberarReserva(pedido.getId()));
+        } else if (nuevoEstado == EstadoPedido.ENTREGADO) {
+            movimientoStock = inventarioVehiculoRepository.confirmarEntregaPedido(pedido.getId());
+        } else {
+            movimientoStock = Mono.empty();
+        }
 
         return movimientoStock.then(pedidoRepository.save(pedido))
                 .flatMap(guardado -> {
@@ -912,6 +927,35 @@ public class PedidoService {
                 .flatMap(tienePedidosActivos -> tienePedidosActivos
                         ? Mono.empty()
                         : actualizarEstadoRepartidor(repartidorId, EstadoRepartidor.DISPONIBLE).then());
+    }
+
+    private Mono<Void> reservarStockVehiculo(Pedido pedido) {
+        if (!StringUtils.hasText(pedido.getRepartidorId())) {
+            return Mono.empty();
+        }
+        return detallePedidoRepository.findByPedidoId(pedido.getId())
+                .collectList()
+                .flatMap(detalles -> {
+                    Map<String, Integer> cantidades = new LinkedHashMap<>();
+                    for (DetallePedido detalle : detalles) {
+                        cantidades.merge(detalle.getProductoId(), detalle.getCantidad(), Math::addExact);
+                    }
+                    if (cantidades.isEmpty()) {
+                        return Mono.empty();
+                    }
+                    return vehiculoRepository.findByField("repartidorId", pedido.getRepartidorId())
+                            .next()
+                            .switchIfEmpty(Mono.error(new OperacionInvalidaException(
+                                    "El repartidor no tiene un vehículo asignado.")))
+                            .flatMap(vehiculo -> inventarioVehiculoRepository.reservarParaPedido(
+                                    pedido.getId(),
+                                    vehiculo.getId(),
+                                    pedido.getRepartidorId(),
+                                    cantidades
+                            ));
+                })
+                .onErrorMap(IllegalStateException.class,
+                        error -> new OperacionInvalidaException(error.getMessage()));
     }
 
     private Mono<Void> reponerStock(Pedido pedido) {

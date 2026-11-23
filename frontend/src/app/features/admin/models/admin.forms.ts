@@ -29,7 +29,7 @@ export const USUARIO_VACIO = (): UsuarioForm => ({
   email: '',
   password: '',
   telefono: '',
-  rol: 'CLIENTE',
+  rol: 'SUPERVISOR',
   placaVehiculo: ''
 });
 
