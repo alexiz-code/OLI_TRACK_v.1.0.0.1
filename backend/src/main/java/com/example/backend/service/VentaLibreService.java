@@ -21,7 +21,6 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.UUID;
 
 @Service
 public class VentaLibreService {
@@ -77,7 +76,7 @@ public class VentaLibreService {
         if (!producto.isActivo()) {
             return Mono.error(new OperacionInvalidaException("El producto no está activo."));
         }
-        String operacionId = "venta-libre-" + UUID.randomUUID();
+        String operacionId = "venta-libre-" + request.getOperacionId();
         VentaLibre venta = new VentaLibre();
         venta.setReferenciaComprador(
                 request.getReferenciaComprador() == null

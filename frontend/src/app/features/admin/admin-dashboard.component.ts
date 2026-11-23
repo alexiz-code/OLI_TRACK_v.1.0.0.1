@@ -21,8 +21,10 @@ import {  NavbarComponent} from '../../shared/components/navbar/navbar.component
 import {  AyacuchoMapComponent} from '../../shared/components/map/ayacucho-map.component';
 import {  IncidenciasChartsComponent} from '../../shared/components/incidencias-charts.component';
 import { PedidoEvidenciaComponent } from '../../shared/components/pedido-evidencia.component';
+import { PedidoAsignacionModalComponent } from '../../shared/components/pedido-asignacion-modal.component';
+import { PedidoRepartidorModalComponent } from '../../shared/components/pedido-repartidor-modal.component';
 import {  OlitrackService, ProductoRequest} from '../../core/services/olitrack.service';
-import {  Cliente, MovimientoRequest, Producto, Repartidor, Rol, Usuario} from '../../core/models/olitrack.models';
+import {  Cliente, MovimientoRequest, Pedido, Producto, Repartidor, Rol, Usuario} from '../../core/models/olitrack.models';
 
 
 type Tab =
@@ -118,6 +120,8 @@ const CAMPO =
     DatePipe,
     NavbarComponent,
     AyacuchoMapComponent,
+    PedidoAsignacionModalComponent,
+    PedidoRepartidorModalComponent,
     IncidenciasChartsComponent,
     PedidoEvidenciaComponent
   ],
@@ -190,6 +194,7 @@ export class AdminDashboardComponent {
   readonly cargando = signal(false);
 
   readonly guardando = signal(false);
+  readonly ventasLibres = signal<any[]>([]);
 
   readonly usuariosPorCargo = computed(() =>
     this.roles.map(rol => ({
@@ -204,6 +209,9 @@ export class AdminDashboardComponent {
 
   readonly selectedClienteId =
     signal<string | undefined>(undefined);
+
+  readonly clienteParaAsignar = signal<Cliente | null>(null);
+  readonly pedidoParaRepartidor = signal<Pedido | null>(null);
 
   readonly selectedRepartidorId =
     signal<string | undefined>(undefined);
@@ -423,6 +431,8 @@ export class AdminDashboardComponent {
 
           this.service.reloadIncidencias(),
 
+          this.service.listarVentasLibres().then(ventas => this.ventasLibres.set(ventas)),
+
           this.service.reloadConfiguracion()
 
         ]);
@@ -586,6 +596,31 @@ export class AdminDashboardComponent {
       undefined
     );
 
+  }
+
+  abrirAsignacionPedido(cliente: Cliente): void {
+    if (cliente.activo) this.clienteParaAsignar.set(cliente);
+  }
+
+  pedidoCreadoEnMapa(pedido: Pedido): void {
+    this.pedidoParaRepartidor.set(pedido);
+  }
+
+  async asignacionConfirmada(): Promise<void> {
+    this.pedidoParaRepartidor.set(null);
+    await Promise.all([this.service.reloadPedidosAdmin(), this.service.reloadRepartidores()]);
+  }
+
+  usuarioDeCliente(cliente: Cliente): Usuario | undefined {
+    return this.service.users().find(usuario => usuario.id === cliente.usuarioId);
+  }
+
+  productoDeVenta(productoId: string): string {
+    return this.service.productos().find(producto => producto.id === productoId)?.nombre ?? productoId;
+  }
+
+  repartidorDeVenta(repartidorId: string): string {
+    return this.service.repartidores().find(repartidor => repartidor.id === repartidorId)?.nombreUsuario ?? repartidorId;
   }
 
   seleccionarRepartidor(

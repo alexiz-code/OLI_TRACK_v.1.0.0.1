@@ -73,7 +73,7 @@ public class PedidoController {
     public Mono<ResponseEntity<PedidoDTO.Response>> crearRapido(
             @PathVariable String clienteId,
             @Valid @RequestBody PedidoDTO.CrearRequest request) {
-        return pedidoService.crear(clienteId, request)
+        return pedidoService.crearPendiente(clienteId, request)
                 .map(dto -> ResponseEntity.status(HttpStatus.CREATED).body(dto));
     }
 

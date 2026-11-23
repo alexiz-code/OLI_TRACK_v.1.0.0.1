@@ -13,6 +13,7 @@ import {
   viewChild
 } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 
 import type * as Leaflet from 'leaflet';
@@ -22,7 +23,8 @@ import { RutasService } from '../../../core/services/rutas.service';
 import {
   Cliente,
   Pedido,
-  Repartidor
+  Repartidor,
+  Usuario
 } from '../../../core/models/olitrack.models';
 import { CentroMapa } from './ayacucho-map.models';
 
@@ -63,7 +65,7 @@ interface RutaPedidoEnSeguimiento {
   selector: 'app-ayacucho-map',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DecimalPipe],
+  imports: [DecimalPipe, FormsModule],
   templateUrl: './ayacucho-map.component.html'
 })
 export class AyacuchoMapComponent {
@@ -79,6 +81,8 @@ export class AyacuchoMapComponent {
 
   readonly clientes = input<Cliente[]>([]);
 
+  readonly usuarios = input<Usuario[]>([]);
+
   readonly pedidos = input<Pedido[]>([]);
 
   readonly companyConfig = input.required<CentroMapa>();
@@ -86,6 +90,8 @@ export class AyacuchoMapComponent {
   readonly selectedClienteId = input<string>();
 
   readonly selectedRepartidorId = input<string>();
+
+  readonly canAsignarPedido = input(false);
 
   readonly routingEnabled = input(false);
 
@@ -102,6 +108,37 @@ export class AyacuchoMapComponent {
   readonly selectCliente = output<Cliente>();
 
   readonly selectRepartidor = output<Repartidor>();
+
+  readonly asignarPedido = output<Cliente>();
+
+  readonly busquedaCliente = signal('');
+
+  readonly clientesFiltrados = computed(() => {
+    const termino = this.normalizar(this.busquedaCliente());
+    if (!termino) return this.clientes();
+    return this.clientes().filter(cliente =>
+      this.normalizar(cliente.nombreNegocio).includes(termino)
+      || this.normalizar(this.nombreCliente(cliente)).includes(termino)
+      || this.normalizar(this.telefonoCliente(cliente)).includes(termino)
+      || this.normalizar(cliente.direccion).includes(termino)
+      || this.normalizar(cliente.referencia).includes(termino)
+      || this.normalizar(cliente.id).includes(termino)
+    );
+  });
+
+  readonly clienteSeleccionadoDelMapa = computed(() =>
+    this.clientes().find(cliente => cliente.id === this.selectedClienteId())
+      ?? this.clientes().find(cliente => cliente.id === this.clienteRutaId())
+      ?? null
+  );
+
+  nombreCliente(cliente: Cliente): string {
+    return this.usuarios().find(usuario => usuario.id === cliente.usuarioId)?.nombre ?? 'Cliente';
+  }
+
+  telefonoCliente(cliente: Cliente): string {
+    return this.usuarios().find(usuario => usuario.id === cliente.usuarioId)?.telefono ?? '';
+  }
 
   readonly rutaActual = signal<RutaResponse | null>(null);
 
@@ -885,7 +922,36 @@ private async initMap(): Promise<void> {
   private seleccionarCliente(cliente: Cliente): void {
     this.clienteRutaId.set(cliente.id);
     this.limpiarRuta();
+    this.centrarCliente(cliente);
     this.selectCliente.emit(cliente);
+  }
+
+  pedidosDelCliente(cliente: Cliente): number {
+    return this.pedidos().filter(pedido => pedido.clienteId === cliente.id
+      && ['PENDIENTE', 'CONFIRMADO', 'EN_PREPARACION'].includes(pedido.estado)).length;
+  }
+
+  private centrarCliente(cliente: Cliente): void {
+    if (!cliente.ubicacion || !this.isValidCoordinate(cliente.ubicacion.latitud, cliente.ubicacion.longitud)) return;
+    this.map?.setView([cliente.ubicacion.latitud, cliente.ubicacion.longitud], 16, { animate: true });
+  }
+
+  seleccionarClienteBuscado(cliente: Cliente): void {
+    this.busquedaCliente.set('');
+    this.seleccionarCliente(cliente);
+    this.centrarCliente(cliente);
+  }
+
+  asignarPedidoCliente(cliente: Cliente): void {
+    this.asignarPedido.emit(cliente);
+  }
+
+  private normalizar(value: unknown): string {
+    return String(value ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
   }
 
   private seleccionarRepartidor(repartidor: Repartidor): void {

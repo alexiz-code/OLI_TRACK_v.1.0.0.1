@@ -4,6 +4,7 @@ import com.example.backend.model.MetodoPago;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -15,6 +16,9 @@ public class VentaLibreDTO {
 
     @Data
     public static class CrearRequest {
+        @NotBlank(message = "El identificador de operación es obligatorio")
+        @Pattern(regexp = "^[A-Za-z0-9_-]{12,100}$", message = "El identificador de operación no es válido")
+        private String operacionId;
         @NotBlank(message = "El producto es obligatorio")
         private String productoId;
         @Positive(message = "La cantidad debe ser mayor que cero")

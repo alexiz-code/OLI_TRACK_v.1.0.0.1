@@ -97,6 +97,57 @@
         </section>
       }
 
+      <section class="grid gap-4 lg:grid-cols-2">
+        <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p class="text-xs font-bold uppercase tracking-wide text-blue-600">Mi stock</p>
+              <h2 class="mt-1 text-lg font-black text-slate-800">{{ vehiculoAsignado()?.placa || 'Mi vehículo' }} — Mi inventario</h2>
+            </div>
+            <button type="button" (click)="cargarDatosComerciales()" class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700">Actualizar</button>
+          </div>
+          @if (!vehiculoAsignado()) {
+            <p class="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">No tienes un vehículo asignado.</p>
+          } @else {
+            <div class="mt-3 space-y-2">
+              @for (stock of stockVehiculo(); track stock.id) {
+                <div class="grid grid-cols-2 gap-2 rounded-xl bg-slate-50 p-3 text-xs sm:grid-cols-4">
+                  <strong class="col-span-2 text-slate-800 sm:col-span-1">{{ productoPorId(stock.productoId) }}</strong>
+                  <span class="text-slate-600">Físico: {{ stock.cargado - stock.vendido - stock.entregado + stock.devuelto }}</span>
+                  <span class="text-slate-600">Reservado: {{ stock.reservado }}</span>
+                  <span class="font-bold text-emerald-700">Disponible: {{ stock.disponible }}</span>
+                </div>
+              } @empty {
+                <p class="mt-3 text-sm text-slate-500">Tu vehículo aún no tiene productos cargados.</p>
+              }
+            </div>
+          }
+        </article>
+
+        <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p class="text-xs font-bold uppercase tracking-wide text-blue-600">Venta libre</p>
+              <h2 class="mt-1 text-lg font-black text-slate-800">Ventas directas desde tu vehículo</h2>
+            </div>
+            <button type="button" (click)="abrirVentaLibre()" [disabled]="!vehiculoAsignado() || !tieneStockDisponible()"
+              class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">+ Nueva venta libre</button>
+          </div>
+          <div class="mt-3 overflow-x-auto">
+            <table class="w-full min-w-[520px] text-left text-xs">
+              <thead class="text-slate-500"><tr><th class="py-2">Fecha</th><th>Producto</th><th>Cantidad</th><th>Comprador</th><th>Total</th><th>Estado</th></tr></thead>
+              <tbody>
+                @for (venta of misVentas(); track venta.id) {
+                  <tr class="border-t border-slate-100"><td class="py-2">{{ venta.creadoEn | date:'short' }}</td><td>{{ productoPorId(venta.productoId) }}</td><td>{{ venta.cantidad }}</td><td>{{ venta.referenciaComprador || 'Tienda no registrada' }}</td><td>S/. {{ venta.total | number:'1.2-2' }}</td><td>{{ venta.estado }}</td></tr>
+                } @empty {
+                  <tr><td colspan="6" class="py-4 text-center text-slate-500">Aún no tienes ventas libres.</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
       <!-- ================================= -->
       <!-- ENTREGAS + MAPA -->
       <!-- ================================= -->
@@ -345,6 +396,27 @@
 
       </div>
 
+      @if (mostrarVentaLibre()) {
+        <div class="fixed inset-0 z-[1100] flex items-center justify-center bg-slate-900/60 p-3" role="dialog" aria-modal="true">
+          <section class="w-full max-w-lg space-y-4 rounded-2xl bg-white p-5 shadow-2xl">
+            <div class="flex items-start justify-between gap-3"><div><p class="text-xs font-bold uppercase tracking-wide text-blue-600">Venta libre</p><h2 class="text-lg font-black text-slate-800">Nueva venta</h2></div><button type="button" (click)="mostrarVentaLibre.set(false)" [disabled]="guardandoVenta()" class="rounded-lg px-3 py-2 text-sm font-bold text-slate-500">Cerrar</button></div>
+            <label class="block text-xs font-semibold text-slate-700">Producto
+              <select [ngModel]="productoVentaId()" (ngModelChange)="productoVentaId.set($event); cantidadVenta.set(1)" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                @for (stock of stockVehiculo(); track stock.id) { @if (stock.disponible > 0) { <option [value]="stock.productoId">{{ productoPorId(stock.productoId) }} · {{ stock.disponible }} disponibles · S/. {{ precioProducto(stock.productoId).toFixed(2) }}</option> } }
+              </select>
+            </label>
+            <label class="block text-xs font-semibold text-slate-700">Cantidad (disponibles: {{ disponibleProducto(productoVentaId()) }})
+              <input type="number" min="1" [max]="disponibleProducto(productoVentaId())" [ngModel]="cantidadVenta()" (ngModelChange)="cantidadVenta.set($event)" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+            </label>
+            <p class="text-right text-lg font-black text-slate-800">Total: S/. {{ precioProducto(productoVentaId()) * cantidadVenta() | number:'1.2-2' }}</p>
+            <label class="block text-xs font-semibold text-slate-700">Comprador o referencia (opcional)<input [ngModel]="referenciaComprador()" (ngModelChange)="referenciaComprador.set($event)" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" /></label>
+            <label class="block text-xs font-semibold text-slate-700">Método de pago<select [ngModel]="metodoPagoVenta()" (ngModelChange)="metodoPagoVenta.set($event)" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"><option value="EFECTIVO">Efectivo</option><option value="YAPE">Yape</option><option value="PLIN">Plin</option><option value="TRANSFERENCIA">Transferencia</option></select></label>
+            @if (errorVenta()) { <p role="alert" class="rounded-lg bg-red-50 p-3 text-xs text-red-700">{{ errorVenta() }}</p> }
+            <div class="flex justify-end gap-2 border-t border-slate-200 pt-3"><button type="button" (click)="mostrarVentaLibre.set(false)" [disabled]="guardandoVenta()" class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700">Cancelar</button><button type="button" (click)="confirmarVentaLibre()" [disabled]="guardandoVenta() || !productoVentaId()" class="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">{{ guardandoVenta() ? 'Guardando…' : 'Confirmar venta' }}</button></div>
+          </section>
+        </div>
+      }
+
 
       <!-- ================================= -->
       <!-- MODAL ENTREGA FALLIDA -->
@@ -476,4 +548,3 @@
       </div>
 
     </div>
-  

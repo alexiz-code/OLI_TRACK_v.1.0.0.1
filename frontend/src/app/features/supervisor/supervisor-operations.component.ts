@@ -1,5 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
 import { OlitrackService } from '../../core/services/olitrack.service';
@@ -7,10 +7,13 @@ import { NavbarComponent } from '../../shared/components/navbar/navbar.component
 import { AyacuchoMapComponent } from '../../shared/components/map/ayacucho-map.component';
 import { IncidenciasChartsComponent } from '../../shared/components/incidencias-charts.component';
 import { PedidoEvidenciaComponent } from '../../shared/components/pedido-evidencia.component';
+import { PedidoAsignacionModalComponent } from '../../shared/components/pedido-asignacion-modal.component';
+import { PedidoRepartidorModalComponent } from '../../shared/components/pedido-repartidor-modal.component';
 
 import {
   EstadoPedido,
-  Pedido
+  Pedido,
+  Cliente
 } from '../../core/models/olitrack.models';
 
 type Vista =
@@ -25,10 +28,13 @@ type Vista =
   imports: [
     FormsModule,
     DatePipe,
+    DecimalPipe,
     NavbarComponent,
     AyacuchoMapComponent,
     IncidenciasChartsComponent,
-    PedidoEvidenciaComponent
+    PedidoEvidenciaComponent,
+    PedidoAsignacionModalComponent,
+    PedidoRepartidorModalComponent
   ],
   templateUrl: './supervisor-operations.component.html'
 })
@@ -39,6 +45,7 @@ export class SupervisorOperationsComponent implements OnInit {
   // ============================================================
 
   readonly service = inject(OlitrackService);
+  readonly ventasLibres = signal<any[]>([]);
 
 
   // ============================================================
@@ -76,6 +83,10 @@ export class SupervisorOperationsComponent implements OnInit {
 
   readonly pedidoRechazo =
     signal<Pedido | null>(null);
+
+  readonly selectedClienteId = signal<string | undefined>(undefined);
+  readonly clienteParaAsignar = signal<Cliente | null>(null);
+  readonly pedidoParaRepartidor = signal<Pedido | null>(null);
 
   observacionesRechazo = '';
 
@@ -166,6 +177,8 @@ export class SupervisorOperationsComponent implements OnInit {
       await Promise.all([
         this.service.reloadRepartidores(),
         this.service.reloadClientes(),
+        this.service.reloadUsuarios(),
+        this.service.reloadProductos(),
         this.service.reloadConfiguracion(),
         this.service.reloadPedidosAdmin()
       ]);
@@ -176,11 +189,42 @@ export class SupervisorOperationsComponent implements OnInit {
         this.service.reloadDashboard(),
         this.service.reloadProductividad(),
         this.service.reloadIncidencias(),
-        this.service.reloadRepartidores()
+        this.service.reloadRepartidores(),
+        this.service.reloadProductos(),
+        this.service.listarVentasLibres().then(ventas => this.ventasLibres.set(ventas))
       ]);
 
     }
 
+  }
+
+  productoDeVenta(productoId: string): string {
+    return this.service.productos().find(producto => producto.id === productoId)?.nombre ?? productoId;
+  }
+
+  repartidorDeVenta(repartidorId: string): string {
+    return this.service.repartidores().find(repartidor => repartidor.id === repartidorId)?.nombreUsuario ?? repartidorId;
+  }
+
+  seleccionarCliente(cliente: Cliente): void {
+    this.selectedClienteId.set(cliente.id);
+  }
+
+  abrirAsignacionPedido(cliente: Cliente): void {
+    if (cliente.activo) this.clienteParaAsignar.set(cliente);
+  }
+
+  usuarioDeCliente(cliente: Cliente): string {
+    return this.service.users().find(usuario => usuario.id === cliente.usuarioId)?.nombre ?? '';
+  }
+
+  pedidoCreadoEnMapa(pedido: Pedido): void {
+    this.pedidoParaRepartidor.set(pedido);
+  }
+
+  async asignacionConfirmada(): Promise<void> {
+    this.pedidoParaRepartidor.set(null);
+    await Promise.all([this.service.reloadPedidosAdmin(), this.service.reloadRepartidores()]);
   }
 
 

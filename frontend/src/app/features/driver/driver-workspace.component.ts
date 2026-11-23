@@ -72,6 +72,17 @@ export class DriverWorkspaceComponent implements OnInit, OnDestroy {
     signal<Pedido | null>(null);
 
   readonly perfilRepartidorFaltante = signal(false);
+  readonly vehiculoAsignado = signal<any | null>(null);
+  readonly stockVehiculo = signal<any[]>([]);
+  readonly misVentas = signal<any[]>([]);
+  readonly mostrarVentaLibre = signal(false);
+  readonly guardandoVenta = signal(false);
+  readonly productoVentaId = signal('');
+  readonly cantidadVenta = signal(1);
+  readonly referenciaComprador = signal('');
+  readonly metodoPagoVenta = signal<'EFECTIVO' | 'YAPE' | 'PLIN' | 'TRANSFERENCIA'>('EFECTIVO');
+  readonly errorVenta = signal('');
+  readonly operacionVentaId = signal('');
   readonly fotoNegocioVisible = signal<{ clienteId: string; url: string } | null>(null);
   readonly cargandoFotoNegocioId = signal<string | null>(null);
   private fotoNegocioObjectUrl: string | null = null;
@@ -129,8 +140,82 @@ export class DriverWorkspaceComponent implements OnInit, OnDestroy {
       );
     }
 
+    await this.cargarDatosComerciales();
+
     await this.actualizarMiPosicion(false);
 
+  }
+
+  async cargarDatosComerciales(): Promise<void> {
+    try {
+      await Promise.all([
+        this.service.reloadProductos(),
+        this.service.misVentasLibres().then(ventas => this.misVentas.set(ventas))
+      ]);
+      const perfil = this.service.repartidorProfile();
+      const vehiculos = await this.service.listarVehiculos();
+      const vehiculo = vehiculos.find(item =>
+        String(item.placa ?? '').trim().toLowerCase() === String(perfil?.placaVehiculo ?? '').trim().toLowerCase()
+      );
+      this.vehiculoAsignado.set(vehiculo ?? null);
+      this.stockVehiculo.set(vehiculo ? await this.service.stockVehiculo(vehiculo.id) : []);
+    } catch (error) {
+      console.error('No se pudo cargar el inventario y las ventas:', error);
+      this.service.triggerToast('ERROR', 'No se pudo cargar tu inventario', this.service.mensajeError(error, 'Intenta recargar la página.'));
+    }
+  }
+
+  productoPorId(productoId: string): string {
+    return this.service.productos().find(producto => producto.id === productoId)?.nombre ?? productoId;
+  }
+
+  disponibleProducto(productoId: string): number {
+    return Number(this.stockVehiculo().find(stock => stock.productoId === productoId)?.disponible ?? 0);
+  }
+
+  tieneStockDisponible(): boolean {
+    return this.stockVehiculo().some(item => Number(item.disponible) > 0);
+  }
+
+  precioProducto(productoId: string): number {
+    return Number(this.service.productos().find(producto => producto.id === productoId)?.precioUnitario ?? 0);
+  }
+
+  abrirVentaLibre(): void {
+    const primeroDisponible = this.stockVehiculo().find(item => item.disponible > 0);
+    this.productoVentaId.set(primeroDisponible?.productoId ?? '');
+    this.cantidadVenta.set(1);
+    this.referenciaComprador.set('');
+    this.errorVenta.set('');
+    this.operacionVentaId.set(globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    this.mostrarVentaLibre.set(true);
+  }
+
+  async confirmarVentaLibre(): Promise<void> {
+    const productoId = this.productoVentaId();
+    const cantidad = Math.floor(Number(this.cantidadVenta()) || 0);
+    if (!productoId || cantidad < 1 || cantidad > this.disponibleProducto(productoId)) {
+      this.errorVenta.set('Selecciona un producto y una cantidad dentro de tu stock disponible.');
+      return;
+    }
+    this.guardandoVenta.set(true);
+    this.errorVenta.set('');
+    try {
+      await this.service.crearVentaLibre({
+        productoId,
+        cantidad,
+        operacionId: this.operacionVentaId(),
+        referenciaComprador: this.referenciaComprador().trim() || undefined,
+        metodoPago: this.metodoPagoVenta()
+      });
+      this.mostrarVentaLibre.set(false);
+      await this.cargarDatosComerciales();
+      this.service.triggerToast('SUCCESS', 'Venta libre registrada', 'Se actualizó el stock disponible del vehículo.');
+    } catch (error) {
+      this.errorVenta.set(this.service.mensajeError(error, 'No se pudo registrar la venta.'));
+    } finally {
+      this.guardandoVenta.set(false);
+    }
   }
 
   ngOnDestroy(): void {

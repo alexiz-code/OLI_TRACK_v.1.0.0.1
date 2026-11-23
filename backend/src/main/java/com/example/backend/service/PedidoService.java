@@ -163,6 +163,10 @@ public class PedidoService {
     }
 
     public Mono<PedidoDTO.Response> crear(String clienteId, PedidoDTO.CrearRequest request) {
+        return crearPendiente(clienteId, request);
+    }
+
+    public Mono<PedidoDTO.Response> crearPendiente(String clienteId, PedidoDTO.CrearRequest request) {
         return configuracionService.obtener()
                 .flatMap(cfg -> validarPedidoPermitido(cfg, request)
                         .then(resolverUbicacionEntrega(clienteId, request.getUbicacionEntrega()))
@@ -171,16 +175,7 @@ public class PedidoService {
                                         .switchIfEmpty(Mono.error(RecursoNoEncontradoException.de("Producto", linea.getProductoId()))))
                                 .collectList()
                                 .flatMap(lineas -> construirYGuardar(
-                                        clienteId, request, cfg, lineas, ubicacionEntrega.orElse(null))
-                                        .flatMap(pedido -> !coordenadasValidas(
-                                                mapper.toModel(pedido.getUbicacionEntrega()))
-                                                ? Mono.just(pedido)
-                                                : asignarRepartidorAutomatico(pedido.getId())
-                                                        .onErrorResume(OperacionInvalidaException.class, error ->
-                                                                error.getMessage() != null
-                                                                        && error.getMessage().startsWith("No hay repartidores disponibles")
-                                                                        ? Mono.just(pedido)
-                                                                        : Mono.error(error))))));
+                                        clienteId, request, cfg, lineas, ubicacionEntrega.orElse(null)))));
     }
 
     private Mono<Optional<UbicacionDTO>> resolverUbicacionEntrega(
@@ -731,52 +726,15 @@ public class PedidoService {
         return buscar(pedidoId)
                 .flatMap(pedido -> {
                     if (pedido.getEstado() == EstadoPedido.CONFIRMADO) {
-                        return StringUtils.hasText(pedido.getRepartidorId())
-                                || !coordenadasValidas(pedido.getUbicacionEntrega())
-                                ? enriquecer(pedido)
-                                : asignarAutomaticamenteSiHayRepartidor(
-                                        pedido.getId(),
-                                        pedido.getRepartidorId(),
-                                        pedido.getUbicacionEntrega(),
-                                        null
-                                );
+                        return enriquecer(pedido);
                     }
                     if (pedido.getEstado() != EstadoPedido.PENDIENTE) {
                         return Mono.error(new OperacionInvalidaException(
                                 "Solo se puede validar un pedido PENDIENTE; estado actual: " + pedido.getEstado()
                         ));
                     }
-                    return cambiarEstado(
-                                    pedidoId,
-                                    EstadoPedido.CONFIRMADO,
-                                    "Validado por supervisión"
-                            )
-                            .flatMap(confirmado -> asignarAutomaticamenteSiHayRepartidor(
-                                    pedidoId,
-                                    confirmado.getRepartidorId(),
-                                    pedido.getUbicacionEntrega(),
-                                    confirmado
-                            ));
+                    return cambiarEstado(pedidoId, EstadoPedido.CONFIRMADO, "Validado por supervisión");
                 });
-    }
-
-    private Mono<PedidoDTO.Response> asignarAutomaticamenteSiHayRepartidor(
-            String pedidoId,
-            String repartidorActual,
-            Ubicacion ubicacionEntrega,
-            PedidoDTO.Response pedidoActual
-    ) {
-        if (StringUtils.hasText(repartidorActual)
-                || !coordenadasValidas(ubicacionEntrega)) {
-            return Mono.just(pedidoActual);
-        }
-        return asignarRepartidorAutomatico(pedidoId)
-                .onErrorResume(OperacionInvalidaException.class, error ->
-                        error.getMessage() != null
-                                && (error.getMessage().startsWith("No hay repartidores disponibles")
-                                || error.getMessage().equals("El pedido ya tiene un repartidor asignado"))
-                                ? buscar(pedidoId).flatMap(this::enriquecer)
-                                : Mono.error(error));
     }
 
     public Mono<PedidoDTO.Response> cambiarEstadoComo(String pedidoId,

@@ -3,10 +3,15 @@ package com.example.backend.service;
 import com.example.backend.dto.VehiculoDTO;
 import com.example.backend.exception.RecursoNoEncontradoException;
 import com.example.backend.model.InventarioVehiculo;
+import com.example.backend.model.Rol;
 import com.example.backend.model.Vehiculo;
 import com.example.backend.repository.InventarioVehiculoRepository;
+import com.example.backend.repository.RepartidorRepository;
 import com.example.backend.repository.VehiculoRepository;
 import com.example.backend.security.SecurityContextUtils;
+import com.example.backend.security.UsuarioAutenticado;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -18,11 +23,14 @@ import java.util.UUID;
 public class VehiculoService {
     private final VehiculoRepository vehiculoRepository;
     private final InventarioVehiculoRepository inventarioRepository;
+    private final RepartidorRepository repartidorRepository;
 
     public VehiculoService(VehiculoRepository vehiculoRepository,
-                           InventarioVehiculoRepository inventarioRepository) {
+                           InventarioVehiculoRepository inventarioRepository,
+                           RepartidorRepository repartidorRepository) {
         this.vehiculoRepository = vehiculoRepository;
         this.inventarioRepository = inventarioRepository;
+        this.repartidorRepository = repartidorRepository;
     }
 
     public Mono<VehiculoDTO.Response> crear(VehiculoDTO.CrearRequest request) {
@@ -36,17 +44,35 @@ public class VehiculoService {
     }
 
     public Flux<VehiculoDTO.Response> listar() {
-        return vehiculoRepository.findAll().flatMap(this::mapVehiculoCompleto);
+        return SecurityContextUtils.usuarioActual().flatMapMany(actual -> {
+            if (actual.getRol() != Rol.REPARTIDOR) return vehiculoRepository.findAll().flatMap(this::mapVehiculoCompleto);
+            return repartidorRepository.findByUsuarioId(actual.getUid())
+                    .flatMapMany(repartidor -> vehiculoRepository.findByField("repartidorId", repartidor.getId()))
+                    .flatMap(this::mapVehiculoCompleto);
+        });
     }
 
     public Mono<VehiculoDTO.Response> obtener(String id) {
-        return vehiculoRepository.findById(id)
+        return SecurityContextUtils.usuarioActual().flatMap(actual -> vehiculoRepository.findById(id)
                 .switchIfEmpty(Mono.error(RecursoNoEncontradoException.de("Vehículo", id)))
-                .flatMap(this::mapVehiculoCompleto);
+                .flatMap(vehiculo -> autorizarVehiculo(actual, vehiculo).thenReturn(vehiculo))
+                .flatMap(this::mapVehiculoCompleto));
     }
 
     public Flux<InventarioVehiculo> listarStock(String vehiculoId) {
-        return inventarioRepository.listarPorVehiculo(vehiculoId);
+        return SecurityContextUtils.usuarioActual().flatMapMany(actual -> vehiculoRepository.findById(vehiculoId)
+                .switchIfEmpty(Mono.error(RecursoNoEncontradoException.de("Vehículo", vehiculoId)))
+                .flatMapMany(vehiculo -> autorizarVehiculo(actual, vehiculo)
+                        .thenMany(inventarioRepository.listarPorVehiculo(vehiculoId))));
+    }
+
+    private Mono<Void> autorizarVehiculo(UsuarioAutenticado actual, Vehiculo vehiculo) {
+        if (actual.getRol() != Rol.REPARTIDOR) return Mono.empty();
+        return repartidorRepository.findByUsuarioId(actual.getUid())
+                .filter(repartidor -> repartidor.getId().equals(vehiculo.getRepartidorId()))
+                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Solo puedes consultar el inventario de tu vehículo asignado.")))
+                .then();
     }
 
     public Mono<InventarioVehiculo> cargar(String vehiculoId, VehiculoDTO.CargaRequest request) {

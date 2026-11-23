@@ -870,6 +870,10 @@ export class OlitrackService {
     return this.get<any[]>('/vehiculos');
   }
 
+  async stockVehiculo(vehiculoId: string): Promise<any[]> {
+    return this.get<any[]>(`/vehiculos/${encodeURIComponent(vehiculoId)}/stock`);
+  }
+
   async crearVehiculo(request: {
     placa: string;
     descripcion?: string;
@@ -890,6 +894,7 @@ export class OlitrackService {
   }
 
   async crearVentaLibre(request: {
+    operacionId?: string;
     productoId: string;
     cantidad: number;
     referenciaComprador?: string;
