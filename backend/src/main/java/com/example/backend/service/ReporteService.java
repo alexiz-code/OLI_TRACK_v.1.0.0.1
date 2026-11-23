@@ -11,6 +11,8 @@ import com.example.backend.repository.DetallePedidoRepository;
 import com.example.backend.repository.IncidenciaRepository;
 import com.example.backend.repository.PedidoRepository;
 import com.example.backend.repository.ProductoRepository;
+import com.example.backend.repository.VentaLibreRepository;
+import com.example.backend.model.VentaLibre;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -43,15 +45,63 @@ public class ReporteService {
     private final ProductoRepository productoRepository;
     private final IncidenciaRepository incidenciaRepository;
     private final ConfiguracionService configuracionService;
+    private final VentaLibreRepository ventaLibreRepository;
 
     public ReporteService(PedidoRepository pedidoRepository, DetallePedidoRepository detallePedidoRepository,
                            ProductoRepository productoRepository, IncidenciaRepository incidenciaRepository,
-                           ConfiguracionService configuracionService) {
+                           ConfiguracionService configuracionService, VentaLibreRepository ventaLibreRepository) {
         this.pedidoRepository = pedidoRepository;
         this.detallePedidoRepository = detallePedidoRepository;
         this.productoRepository = productoRepository;
         this.incidenciaRepository = incidenciaRepository;
         this.configuracionService = configuracionService;
+        this.ventaLibreRepository = ventaLibreRepository;
+    }
+
+    /** Ingresos brutos por fecha de entrega/venta, separados por repartidor. */
+    public Mono<List<ReporteDTO.IngresoDiarioRepartidorDTO>> ingresosDiariosPorRepartidor() {
+        return Mono.zip(pedidoRepository.findAll().collectList(), ventaLibreRepository.findAll().collectList())
+                .map(datos -> {
+                    SimpleDateFormat formato = new SimpleDateFormat("yyyy-MM-dd");
+                    formato.setTimeZone(LIMA);
+                    Map<String, AcumuladoIngreso> acumulados = new TreeMap<>();
+                    for (Pedido pedido : datos.getT1()) {
+                        if (pedido.getEstado() != EstadoPedido.ENTREGADO || pedido.getEntregadoEn() == null
+                                || pedido.getRepartidorId() == null || pedido.getRepartidorId().isBlank()) continue;
+                        String fecha = formato.format(pedido.getEntregadoEn());
+                        AcumuladoIngreso fila = acumulados.computeIfAbsent(fecha + "|" + pedido.getRepartidorId(),
+                                clave -> new AcumuladoIngreso(fecha, pedido.getRepartidorId()));
+                        fila.pedidosEntregados++;
+                        if (pedido.getTotal() != null) fila.ingresosPedidos = fila.ingresosPedidos.add(pedido.getTotal());
+                    }
+                    for (VentaLibre venta : datos.getT2()) {
+                        if (!"CONFIRMADA".equalsIgnoreCase(venta.getEstado()) || venta.getCreadoEn() == null
+                                || venta.getRepartidorId() == null || venta.getRepartidorId().isBlank()) continue;
+                        String fecha = formato.format(venta.getCreadoEn());
+                        AcumuladoIngreso fila = acumulados.computeIfAbsent(fecha + "|" + venta.getRepartidorId(),
+                                clave -> new AcumuladoIngreso(fecha, venta.getRepartidorId()));
+                        fila.ventasLibres++;
+                        if (venta.getTotal() != null) fila.ingresosVentasLibres = fila.ingresosVentasLibres.add(venta.getTotal());
+                    }
+                    return acumulados.values().stream().map(AcumuladoIngreso::toDto)
+                            .sorted(Comparator.comparing(ReporteDTO.IngresoDiarioRepartidorDTO::getFecha).reversed()
+                                    .thenComparing(ReporteDTO.IngresoDiarioRepartidorDTO::getRepartidorId))
+                            .toList();
+                });
+    }
+
+    private static final class AcumuladoIngreso {
+        private final String fecha;
+        private final String repartidorId;
+        private long pedidosEntregados;
+        private BigDecimal ingresosPedidos = BigDecimal.ZERO;
+        private long ventasLibres;
+        private BigDecimal ingresosVentasLibres = BigDecimal.ZERO;
+        private AcumuladoIngreso(String fecha, String repartidorId) { this.fecha = fecha; this.repartidorId = repartidorId; }
+        private ReporteDTO.IngresoDiarioRepartidorDTO toDto() {
+            return new ReporteDTO.IngresoDiarioRepartidorDTO(fecha, repartidorId, pedidosEntregados,
+                    ingresosPedidos, ventasLibres, ingresosVentasLibres, ingresosPedidos.add(ingresosVentasLibres));
+        }
     }
 
     private Mono<Long> umbralDemora() {

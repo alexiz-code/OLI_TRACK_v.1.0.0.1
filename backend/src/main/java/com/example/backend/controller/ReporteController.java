@@ -51,6 +51,12 @@ public class ReporteController {
         return reporteService.productividad();
     }
 
+    @GetMapping("/ingresos-diarios-repartidor")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'SUPERVISOR')")
+    public Mono<List<ReporteDTO.IngresoDiarioRepartidorDTO>> ingresosDiariosPorRepartidor() {
+        return reporteService.ingresosDiariosPorRepartidor();
+    }
+
     /** HU-044 / HU-047: exportar el listado de pedidos como CSV. */
     @GetMapping("/pedidos/exportar")
     @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'SUPERVISOR')")

@@ -3,6 +3,8 @@ package com.example.backend.repository;
 import com.example.backend.model.Inventario;
 import com.example.backend.model.InventarioVehiculo;
 import com.example.backend.model.MovimientoInventarioVehiculo;
+import com.example.backend.model.Kardex;
+import com.example.backend.model.TipoMovimiento;
 import com.example.backend.model.TipoMovimientoVehiculo;
 import com.example.backend.util.Colecciones;
 import com.example.backend.util.ReactiveFirebase;
@@ -163,79 +165,142 @@ public class InventarioVehiculoRepository extends FirestoreRepository<Inventario
             String operacionId,
             String vehiculoId,
             String repartidorId,
-            String productoId,
-            int cantidad,
+            java.util.Map<String, Integer> cantidades,
             String motivo,
             String usuarioResponsableId
     ) {
         DocumentReference operacionRef = firestore.collection(Colecciones.OPERACIONES_VEHICULO)
                 .document(operacionId);
         DocumentReference vehiculoRef = firestore.collection(Colecciones.VEHICULOS).document(vehiculoId);
-        DocumentReference stockRef = collection().document(vehiculoId + "_" + productoId);
-        DocumentReference plantaRef = firestore.collection(Colecciones.INVENTARIOS).document();
-
         return ReactiveFirebase.defer(() -> firestore.runTransaction(transaction -> {
             DocumentSnapshot operacion = transaction.get(operacionRef).get();
             if (operacion.exists()) {
-                return transaction.get(stockRef).get().toObject(InventarioVehiculo.class);
+                String productoExistente = operacion.getString("productoPrincipalId");
+                return productoExistente == null ? null : transaction.get(
+                        collection().document(vehiculoId + "_" + productoExistente)).get()
+                        .toObject(InventarioVehiculo.class);
             }
-            if (cantidad <= 0) {
-                throw new IllegalArgumentException("La cantidad debe ser mayor que cero.");
+            if (cantidades == null || cantidades.isEmpty()) {
+                throw new IllegalArgumentException("Indica al menos un producto para transferir.");
             }
             DocumentSnapshot vehiculo = transaction.get(vehiculoRef).get();
             if (!vehiculo.exists()) {
                 throw new IllegalStateException("No existe el vehículo seleccionado.");
             }
 
-            QuerySnapshot plantaResult = transaction.get(firestore.collection(Colecciones.INVENTARIOS)
-                    .whereEqualTo("productoId", productoId)).get();
-            if (plantaResult.isEmpty()) {
-                throw new IllegalStateException("El producto no tiene inventario en planta.");
+            java.util.List<MovimientoCarga> movimientos = new java.util.ArrayList<>();
+            for (var entrada : cantidades.entrySet()) {
+                String productoId = entrada.getKey();
+                int cantidad = entrada.getValue() == null ? 0 : entrada.getValue();
+                if (cantidad <= 0) throw new IllegalArgumentException("La cantidad debe ser mayor que cero.");
+                QuerySnapshot plantaResult = transaction.get(firestore.collection(Colecciones.INVENTARIOS)
+                        .whereEqualTo("productoId", productoId)).get();
+                if (plantaResult.size() != 1) throw new IllegalStateException("Inventario de planta inexistente o duplicado para " + productoId);
+                DocumentSnapshot planta = plantaResult.getDocuments().get(0);
+                Inventario inventarioPlanta = planta.toObject(Inventario.class);
+                if (inventarioPlanta == null || inventarioPlanta.getStockActual() < cantidad)
+                    throw new IllegalStateException("Stock insuficiente en planta para " + productoId);
+                DocumentReference stockRef = collection().document(vehiculoId + "_" + productoId);
+                DocumentSnapshot stockSnap = transaction.get(stockRef).get();
+                InventarioVehiculo stock = stockSnap.exists() ? stockSnap.toObject(InventarioVehiculo.class) : new InventarioVehiculo();
+                if (stock == null) stock = new InventarioVehiculo();
+                int anteriorPlanta = inventarioPlanta.getStockActual();
+                stock.setId(vehiculoId + "_" + productoId);
+                stock.setVehiculoId(vehiculoId);
+                stock.setRepartidorId(repartidorId);
+                stock.setProductoId(productoId);
+                stock.setCargado(stock.getCargado() + cantidad);
+                stock.setActualizadoEn(new Date());
+                stock.setUltimaCargaEn(new Date());
+                movimientos.add(new MovimientoCarga(planta.getReference(), stockRef, inventarioPlanta,
+                        stock, productoId, cantidad, anteriorPlanta));
             }
-            DocumentSnapshot planta = plantaResult.getDocuments().get(0);
-            Inventario inventarioPlanta = planta.toObject(Inventario.class);
-            if (inventarioPlanta == null || inventarioPlanta.getStockActual() < cantidad) {
-                throw new IllegalStateException("Stock insuficiente en planta.");
+            for (MovimientoCarga movimiento : movimientos) {
+                int nuevoPlanta = movimiento.inventarioPlanta().getStockActual() - movimiento.cantidad();
+                transaction.update(movimiento.plantaRef(), "stockActual", nuevoPlanta, "actualizadoEn", new Date());
+                transaction.set(movimiento.stockRef(), movimiento.stock());
+                Kardex kardex = new Kardex(null, movimiento.productoId(), TipoMovimiento.SALIDA,
+                        movimiento.cantidad(), movimiento.anterior(), nuevoPlanta,
+                        motivo == null ? "CARGA A VEHICULO" : motivo, null);
+                transaction.set(firestore.collection(Colecciones.KARDEX).document(), kardex);
+                MovimientoInventarioVehiculo registro = crearMovimiento(operacionId, vehiculoId, repartidorId,
+                        movimiento.productoId(), movimiento.cantidad(), motivo, usuarioResponsableId,
+                        TipoMovimientoVehiculo.CARGA_PLANTA);
+                transaction.set(firestore.collection(Colecciones.MOVIMIENTOS_INVENTARIO_VEHICULOS)
+                        .document(registro.getId()), registro);
             }
-
-            InventarioVehiculo stock = transaction.get(stockRef).get().exists()
-                    ? transaction.get(stockRef).get().toObject(InventarioVehiculo.class)
-                    : new InventarioVehiculo();
-            if (stock == null) {
-                stock = new InventarioVehiculo();
-            }
-            stock.setId(vehiculoId + "_" + productoId);
-            stock.setVehiculoId(vehiculoId);
-            stock.setRepartidorId(repartidorId);
-            stock.setProductoId(productoId);
-            stock.setCargado(stock.getCargado() + cantidad);
-            stock.setActualizadoEn(new Date());
-
-            transaction.update(planta.getReference(), "stockActual",
-                    inventarioPlanta.getStockActual() - cantidad, "actualizadoEn", new Date());
-            transaction.set(stockRef, stock);
-
-            MovimientoInventarioVehiculo movimiento = new MovimientoInventarioVehiculo();
-            movimiento.setId(java.util.UUID.randomUUID().toString());
-            movimiento.setOperacionId(operacionId);
-            movimiento.setVehiculoId(vehiculoId);
-            movimiento.setVehiculoDestinoId(vehiculoId);
-            movimiento.setRepartidorId(repartidorId);
-            movimiento.setProductoId(productoId);
-            movimiento.setTipoMovimiento(TipoMovimientoVehiculo.CARGA_PLANTA);
-            movimiento.setCantidad(cantidad);
-            movimiento.setMotivo(motivo);
-            movimiento.setUsuarioResponsableId(usuarioResponsableId);
-            transaction.set(firestore.collection(Colecciones.MOVIMIENTOS_INVENTARIO_VEHICULOS)
-                    .document(movimiento.getId()), movimiento);
             transaction.set(operacionRef, java.util.Map.of(
                     "tipo", "CARGA_PLANTA",
                     "vehiculoId", vehiculoId,
-                    "productoId", productoId,
-                    "cantidad", cantidad,
+                    "productoPrincipalId", cantidades.keySet().iterator().next(),
+                    "productos", cantidades,
+                    "repartidorId", repartidorId,
+                    "usuarioResponsableId", usuarioResponsableId,
                     "creadoEn", new Date()
             ));
-            return stock;
+            return movimientos.get(0).stock();
         }));
     }
+
+    public Mono<InventarioVehiculo> devolverAPlanta(String operacionId, String vehiculoId, String repartidorId,
+            java.util.Map<String, Integer> cantidades, String motivo, String usuarioResponsableId) {
+        DocumentReference operacionRef = firestore.collection(Colecciones.OPERACIONES_VEHICULO).document(operacionId);
+        return ReactiveFirebase.defer(() -> firestore.runTransaction(transaction -> {
+            if (transaction.get(operacionRef).get().exists()) return null;
+            if (cantidades == null || cantidades.isEmpty()) throw new IllegalArgumentException("Indica productos para devolver.");
+            java.util.List<MovimientoDevolucion> cambios = new java.util.ArrayList<>();
+            for (var entrada : cantidades.entrySet()) {
+                int cantidad = entrada.getValue() == null ? 0 : entrada.getValue();
+                if (cantidad <= 0) throw new IllegalArgumentException("La cantidad debe ser mayor que cero.");
+                String productoId = entrada.getKey();
+                DocumentReference stockRef = collection().document(vehiculoId + "_" + productoId);
+                DocumentSnapshot stockSnapshot = transaction.get(stockRef).get();
+                if (!stockSnapshot.exists()) throw new IllegalStateException("No existe stock del producto en el vehículo.");
+                InventarioVehiculo stock = stockSnapshot.toObject(InventarioVehiculo.class);
+                if (stock == null || stock.getDisponible() < cantidad) throw new IllegalStateException("La devolución supera el stock físico disponible (sin reservas).");
+                QuerySnapshot plantaResult = transaction.get(firestore.collection(Colecciones.INVENTARIOS).whereEqualTo("productoId", productoId)).get();
+                if (plantaResult.size() != 1) throw new IllegalStateException("Inventario de planta inexistente o duplicado para " + productoId);
+                DocumentSnapshot plantaDoc = plantaResult.getDocuments().get(0);
+                Inventario planta = plantaDoc.toObject(Inventario.class);
+                if (planta == null) throw new IllegalStateException("No se pudo leer inventario de planta.");
+                cambios.add(new MovimientoDevolucion(stockRef, plantaDoc.getReference(), stock, planta,
+                        productoId, cantidad, planta.getStockActual()));
+            }
+            for (MovimientoDevolucion cambio : cambios) {
+                cambio.stock().setCargado(cambio.stock().getCargado() - cambio.cantidad());
+                cambio.stock().setActualizadoEn(new Date());
+                transaction.set(cambio.stockRef(), cambio.stock());
+                int nuevo = cambio.stockPlanta().getStockActual() + cambio.cantidad();
+                transaction.update(cambio.plantaRef(), "stockActual", nuevo, "actualizadoEn", new Date());
+                Kardex kardex = new Kardex(null, cambio.productoId(), TipoMovimiento.ENTRADA, cambio.cantidad(),
+                        cambio.stockPlanta().getStockActual(), nuevo, motivo == null ? "DEVOLUCION VEHICULO" : motivo, null);
+                transaction.set(firestore.collection(Colecciones.KARDEX).document(), kardex);
+                MovimientoInventarioVehiculo registro = crearMovimiento(operacionId, vehiculoId, repartidorId,
+                        cambio.productoId(), cambio.cantidad(), motivo, usuarioResponsableId,
+                        TipoMovimientoVehiculo.DEVOLUCION);
+                registro.setVehiculoOrigenId(vehiculoId);
+                transaction.set(firestore.collection(Colecciones.MOVIMIENTOS_INVENTARIO_VEHICULOS).document(registro.getId()), registro);
+            }
+            transaction.set(operacionRef, java.util.Map.of("tipo", "DEVOLUCION_PLANTA", "vehiculoId", vehiculoId,
+                    "repartidorId", repartidorId == null ? "" : repartidorId, "productos", cantidades, "usuarioResponsableId", usuarioResponsableId,
+                    "creadoEn", new Date()));
+            return cambios.get(0).stock();
+        }));
+    }
+
+    private MovimientoInventarioVehiculo crearMovimiento(String operacionId, String vehiculoId, String repartidorId,
+            String productoId, int cantidad, String motivo, String usuario, TipoMovimientoVehiculo tipo) {
+        MovimientoInventarioVehiculo movimiento = new MovimientoInventarioVehiculo();
+        movimiento.setId(java.util.UUID.randomUUID().toString()); movimiento.setOperacionId(operacionId);
+        movimiento.setVehiculoId(vehiculoId); movimiento.setVehiculoDestinoId(vehiculoId);
+        movimiento.setRepartidorId(repartidorId); movimiento.setProductoId(productoId);
+        movimiento.setTipoMovimiento(tipo); movimiento.setCantidad(cantidad); movimiento.setMotivo(motivo);
+        movimiento.setUsuarioResponsableId(usuario);
+        return movimiento;
+    }
+
+    private record MovimientoCarga(DocumentReference plantaRef, DocumentReference stockRef, Inventario inventarioPlanta,
+            InventarioVehiculo stock, String productoId, int cantidad, int anterior) { }
+    private record MovimientoDevolucion(DocumentReference stockRef, DocumentReference plantaRef, InventarioVehiculo stock,
+            Inventario stockPlanta, String productoId, int cantidad, int anterior) { }
 }

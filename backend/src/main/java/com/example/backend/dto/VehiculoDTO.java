@@ -22,11 +22,19 @@ public class VehiculoDTO {
 
     @Data
     public static class CargaRequest {
-        @NotBlank(message = "El producto es obligatorio")
+        @NotBlank(message = "El identificador de operación es obligatorio")
+        private String operacionId;
+        private List<LineaStockRequest> productos;
+        // Compatibilidad con clientes anteriores que cargaban un solo producto.
         private String productoId;
-        @Positive(message = "La cantidad debe ser mayor que cero")
         private int cantidad;
         private String motivo;
+    }
+
+    @Data
+    public static class LineaStockRequest {
+        @NotBlank(message = "El producto es obligatorio") private String productoId;
+        @Positive(message = "La cantidad debe ser mayor que cero") private int cantidad;
     }
 
     @Data
@@ -53,5 +61,6 @@ public class VehiculoDTO {
         private int entregado;
         private int devuelto;
         private int disponible;
+        private Date ultimaCargaEn;
     }
 }

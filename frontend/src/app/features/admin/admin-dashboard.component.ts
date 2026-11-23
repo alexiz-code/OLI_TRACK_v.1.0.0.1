@@ -23,6 +23,7 @@ import {  IncidenciasChartsComponent} from '../../shared/components/incidencias-
 import { PedidoEvidenciaComponent } from '../../shared/components/pedido-evidencia.component';
 import { PedidoAsignacionModalComponent } from '../../shared/components/pedido-asignacion-modal.component';
 import { PedidoRepartidorModalComponent } from '../../shared/components/pedido-repartidor-modal.component';
+import { StockVehiculoModalComponent } from '../../shared/components/stock-vehiculo-modal.component';
 import {  OlitrackService, ProductoRequest} from '../../core/services/olitrack.service';
 import {  Cliente, MovimientoRequest, Pedido, Producto, Repartidor, Rol, Usuario} from '../../core/models/olitrack.models';
 
@@ -122,6 +123,7 @@ const CAMPO =
     AyacuchoMapComponent,
     PedidoAsignacionModalComponent,
     PedidoRepartidorModalComponent,
+    StockVehiculoModalComponent,
     IncidenciasChartsComponent,
     PedidoEvidenciaComponent
   ],
@@ -215,6 +217,8 @@ export class AdminDashboardComponent {
 
   readonly selectedRepartidorId =
     signal<string | undefined>(undefined);
+  readonly vehiculoParaStock = signal<any | null>(null);
+  readonly modoTransferencia = signal<'CARGA' | 'DEVOLUCION'>('CARGA');
 
   readonly selectedCliente =
     computed(() =>
@@ -428,6 +432,7 @@ export class AdminDashboardComponent {
           this.service.reloadPedidosAdmin(),
 
           this.service.reloadDashboard(),
+          this.service.reloadIngresosDiariosRepartidor(),
 
           this.service.reloadIncidencias(),
 
@@ -600,6 +605,23 @@ export class AdminDashboardComponent {
 
   abrirAsignacionPedido(cliente: Cliente): void {
     if (cliente.activo) this.clienteParaAsignar.set(cliente);
+  }
+
+  async abrirTransferenciaStock(modo: 'CARGA' | 'DEVOLUCION' = 'CARGA'): Promise<void> {
+    const repartidor = this.selectedRepartidor();
+    if (!repartidor) return;
+    try {
+      const vehiculos = await this.service.listarVehiculos();
+      const vehiculo = vehiculos.find(item => item.repartidorId === repartidor.id);
+      if (!vehiculo || !vehiculo.placa) {
+        this.service.triggerToast('WARNING', 'Vehículo no asignado', 'El repartidor no tiene un vehículo con placa asignado. No se puede transferir stock.');
+        return;
+      }
+      this.modoTransferencia.set(modo);
+      this.vehiculoParaStock.set(vehiculo);
+    } catch (error) {
+      this.service.triggerToast('ERROR', 'Error de inventario', 'No se pudo consultar el vehículo asignado.');
+    }
   }
 
   pedidoCreadoEnMapa(pedido: Pedido): void {

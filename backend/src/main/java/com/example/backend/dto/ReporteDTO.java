@@ -56,4 +56,17 @@ public class ReporteDTO {
         private double tiempoPromedioMinutos;
         private long incidencias;
     }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class IngresoDiarioRepartidorDTO {
+        private String fecha;
+        private String repartidorId;
+        private long pedidosEntregados;
+        private BigDecimal ingresosPedidos;
+        private long ventasLibres;
+        private BigDecimal ingresosVentasLibres;
+        private BigDecimal ingresosTotales;
+    }
 }

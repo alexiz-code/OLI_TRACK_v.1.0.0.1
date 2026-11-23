@@ -9,6 +9,7 @@ import { IncidenciasChartsComponent } from '../../shared/components/incidencias-
 import { PedidoEvidenciaComponent } from '../../shared/components/pedido-evidencia.component';
 import { PedidoAsignacionModalComponent } from '../../shared/components/pedido-asignacion-modal.component';
 import { PedidoRepartidorModalComponent } from '../../shared/components/pedido-repartidor-modal.component';
+import { StockVehiculoModalComponent } from '../../shared/components/stock-vehiculo-modal.component';
 
 import {
   EstadoPedido,
@@ -34,7 +35,8 @@ type Vista =
     IncidenciasChartsComponent,
     PedidoEvidenciaComponent,
     PedidoAsignacionModalComponent,
-    PedidoRepartidorModalComponent
+    PedidoRepartidorModalComponent,
+    StockVehiculoModalComponent
   ],
   templateUrl: './supervisor-operations.component.html'
 })
@@ -85,6 +87,9 @@ export class SupervisorOperationsComponent implements OnInit {
     signal<Pedido | null>(null);
 
   readonly selectedClienteId = signal<string | undefined>(undefined);
+  readonly selectedRepartidorId = signal<string | undefined>(undefined);
+  readonly vehiculoParaStock = signal<any | null>(null);
+  readonly modoTransferencia = signal<'CARGA'|'DEVOLUCION'>('CARGA');
   readonly clienteParaAsignar = signal<Cliente | null>(null);
   readonly pedidoParaRepartidor = signal<Pedido | null>(null);
 
@@ -187,6 +192,7 @@ export class SupervisorOperationsComponent implements OnInit {
 
       await Promise.all([
         this.service.reloadDashboard(),
+        this.service.reloadIngresosDiariosRepartidor(),
         this.service.reloadProductividad(),
         this.service.reloadIncidencias(),
         this.service.reloadRepartidores(),
@@ -208,6 +214,18 @@ export class SupervisorOperationsComponent implements OnInit {
 
   seleccionarCliente(cliente: Cliente): void {
     this.selectedClienteId.set(cliente.id);
+  }
+
+  repartidorSeleccionado() { return this.service.repartidores().find(item => item.id === this.selectedRepartidorId()) ?? null; }
+
+  async abrirTransferenciaStock(modo: 'CARGA'|'DEVOLUCION' = 'CARGA'): Promise<void> {
+    const repartidor=this.service.repartidores().find(item=>item.id===this.selectedRepartidorId());
+    if(!repartidor) return;
+    try {
+      const vehiculo=(await this.service.listarVehiculos()).find(item=>item.repartidorId===repartidor.id);
+      if(!vehiculo?.placa) { this.service.triggerToast('WARNING','Vehículo no asignado','El repartidor no tiene un vehículo con placa asignado.'); return; }
+      this.modoTransferencia.set(modo); this.vehiculoParaStock.set(vehiculo);
+    } catch { this.service.triggerToast('ERROR','Error de inventario','No se pudo consultar el vehículo asignado.'); }
   }
 
   abrirAsignacionPedido(cliente: Cliente): void {

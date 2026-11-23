@@ -79,20 +79,38 @@ public class VehiculoService {
         return vehiculoRepository.findById(vehiculoId)
                 .switchIfEmpty(Mono.error(RecursoNoEncontradoException.de("Vehículo", vehiculoId)))
                 .flatMap(vehiculo -> SecurityContextUtils.usuarioActual()
-                        .flatMap(actual -> inventarioRepository.cargarDesdePlanta(
-                                "carga-" + UUID.randomUUID(),
-                                vehiculoId,
-                                vehiculo.getRepartidorId(),
-                                request.getProductoId(),
-                                request.getCantidad(),
-                                request.getMotivo(),
-                                actual.getUid()
-                        )
+                        .flatMap(actual -> {
+                            if (actual.getRol() != Rol.ADMINISTRADOR && actual.getRol() != Rol.SUPERVISOR)
+                                return Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN, "No autorizado para transferir inventario."));
+                            if (vehiculo.getRepartidorId() == null || vehiculo.getRepartidorId().isBlank())
+                                return Mono.error(new ResponseStatusException(HttpStatus.CONFLICT, "El vehículo no tiene repartidor asignado."));
+                            java.util.Map<String, Integer> cantidades = new java.util.LinkedHashMap<>();
+                            if (request.getProductos() != null) request.getProductos().forEach(item -> cantidades.put(item.getProductoId(), item.getCantidad()));
+                            if (cantidades.isEmpty() && request.getProductoId() != null) cantidades.put(request.getProductoId(), request.getCantidad());
+                            return inventarioRepository.cargarDesdePlanta(request.getOperacionId(), vehiculoId,
+                                    vehiculo.getRepartidorId(), cantidades, request.getMotivo(), actual.getUid());
+                        })
                         .onErrorMap(error -> error instanceof IllegalStateException
                                         || error instanceof IllegalArgumentException,
                                 error -> new com.example.backend.exception.OperacionInvalidaException(
                                         error.getMessage()
-                                ))));
+                                )));
+    }
+
+    public Mono<InventarioVehiculo> devolver(String vehiculoId, VehiculoDTO.CargaRequest request) {
+        return vehiculoRepository.findById(vehiculoId)
+                .switchIfEmpty(Mono.error(RecursoNoEncontradoException.de("Vehículo", vehiculoId)))
+                .flatMap(vehiculo -> SecurityContextUtils.usuarioActual().flatMap(actual -> {
+                    if (actual.getRol() != Rol.ADMINISTRADOR && actual.getRol() != Rol.SUPERVISOR)
+                        return Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN, "No autorizado para devolver inventario."));
+                    java.util.Map<String, Integer> cantidades = new java.util.LinkedHashMap<>();
+                    if (request.getProductos() != null) request.getProductos().forEach(item -> cantidades.put(item.getProductoId(), item.getCantidad()));
+                    if (cantidades.isEmpty() && request.getProductoId() != null) cantidades.put(request.getProductoId(), request.getCantidad());
+                    return inventarioRepository.devolverAPlanta(request.getOperacionId(), vehiculoId,
+                            vehiculo.getRepartidorId(), cantidades, request.getMotivo(), actual.getUid())
+                            .onErrorMap(error -> error instanceof IllegalStateException || error instanceof IllegalArgumentException,
+                                    error -> new com.example.backend.exception.OperacionInvalidaException(error.getMessage()));
+                }));
     }
 
     private Mono<VehiculoDTO.Response> mapVehiculoCompleto(Vehiculo vehiculo) {
@@ -130,6 +148,7 @@ public class VehiculoService {
         response.setEntregado(stock.getEntregado());
         response.setDevuelto(stock.getDevuelto());
         response.setDisponible(stock.getDisponible());
+        response.setUltimaCargaEn(stock.getUltimaCargaEn());
         return response;
     }
 }

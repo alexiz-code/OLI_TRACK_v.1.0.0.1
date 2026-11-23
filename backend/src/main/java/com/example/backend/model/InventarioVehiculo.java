@@ -22,6 +22,7 @@ public class InventarioVehiculo implements EntidadFirestore {
     private int vendido;
     private int entregado;
     private int devuelto;
+    private Date ultimaCargaEn;
     @ServerTimestamp
     private Date actualizadoEn;
 

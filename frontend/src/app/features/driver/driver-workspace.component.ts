@@ -86,6 +86,7 @@ export class DriverWorkspaceComponent implements OnInit, OnDestroy {
   readonly fotoNegocioVisible = signal<{ clienteId: string; url: string } | null>(null);
   readonly cargandoFotoNegocioId = signal<string | null>(null);
   private fotoNegocioObjectUrl: string | null = null;
+  private stockRefreshTimer?: ReturnType<typeof setInterval>;
 
   readonly tiposIncidencia: {
     value: TipoIncidencia;
@@ -141,6 +142,10 @@ export class DriverWorkspaceComponent implements OnInit, OnDestroy {
     }
 
     await this.cargarDatosComerciales();
+    this.stockRefreshTimer = setInterval(() => {
+      const id = this.vehiculoAsignado()?.id;
+      if (id) this.service.stockVehiculo(id).then(stock => this.stockVehiculo.set(stock)).catch(() => undefined);
+    }, 20000);
 
     await this.actualizarMiPosicion(false);
 
@@ -219,6 +224,7 @@ export class DriverWorkspaceComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.stockRefreshTimer) clearInterval(this.stockRefreshTimer);
     this.limpiarFotoNegocioVisible();
   }
 

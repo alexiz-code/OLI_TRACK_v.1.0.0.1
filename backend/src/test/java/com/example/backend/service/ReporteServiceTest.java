@@ -5,6 +5,7 @@ import com.example.backend.model.ConfiguracionEmpresa;
 import com.example.backend.model.EstadoPedido;
 import com.example.backend.model.HistorialEstado;
 import com.example.backend.model.Pedido;
+import com.example.backend.model.VentaLibre;
 import com.example.backend.repository.DetallePedidoRepository;
 import com.example.backend.repository.IncidenciaRepository;
 import com.example.backend.repository.PedidoRepository;
@@ -18,6 +19,7 @@ import reactor.test.StepVerifier;
 import java.time.Instant;
 import java.util.Date;
 import java.util.List;
+import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
@@ -28,19 +30,45 @@ class ReporteServiceTest {
     private IncidenciaRepository incidenciaRepository;
     private ConfiguracionService configuracionService;
     private ReporteService reporteService;
+    private com.example.backend.repository.VentaLibreRepository ventaLibreRepository;
 
     @BeforeEach
     void setUp() {
         pedidoRepository = org.mockito.Mockito.mock(PedidoRepository.class);
         incidenciaRepository = org.mockito.Mockito.mock(IncidenciaRepository.class);
         configuracionService = org.mockito.Mockito.mock(ConfiguracionService.class);
+        ventaLibreRepository = org.mockito.Mockito.mock(com.example.backend.repository.VentaLibreRepository.class);
         reporteService = new ReporteService(
                 pedidoRepository,
                 org.mockito.Mockito.mock(DetallePedidoRepository.class),
                 org.mockito.Mockito.mock(ProductoRepository.class),
                 incidenciaRepository,
-                configuracionService
+                configuracionService,
+                ventaLibreRepository
         );
+    }
+
+    @Test
+    void agrupaIngresosBrutosDiariosPorRepartidorSinContarOtrosMovimientos() {
+        Pedido entregado = pedido("pedido-1", "09:00:00Z", "10:22:00Z", "10:20:00Z", "10:00:00Z");
+        entregado.setTotal(new BigDecimal("45.50"));
+        VentaLibre venta = new VentaLibre();
+        venta.setId("venta-1"); venta.setRepartidorId("r1"); venta.setEstado("CONFIRMADA");
+        venta.setTotal(new BigDecimal("12.00")); venta.setCreadoEn(fecha("11:00:00Z"));
+        when(pedidoRepository.findAll()).thenReturn(Flux.just(entregado));
+        when(ventaLibreRepository.findAll()).thenReturn(Flux.just(venta));
+
+        StepVerifier.create(reporteService.ingresosDiariosPorRepartidor())
+                .assertNext(filas -> {
+                    assertEquals(1, filas.size());
+                    assertEquals("2026-10-19", filas.get(0).getFecha());
+                    assertEquals("r1", filas.get(0).getRepartidorId());
+                    assertEquals(1, filas.get(0).getPedidosEntregados());
+                    assertEquals(new BigDecimal("45.50"), filas.get(0).getIngresosPedidos());
+                    assertEquals(1, filas.get(0).getVentasLibres());
+                    assertEquals(new BigDecimal("12.00"), filas.get(0).getIngresosVentasLibres());
+                    assertEquals(new BigDecimal("57.50"), filas.get(0).getIngresosTotales());
+                }).verifyComplete();
     }
 
     @Test

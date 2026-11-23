@@ -101,8 +101,8 @@
         <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
           <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p class="text-xs font-bold uppercase tracking-wide text-blue-600">Mi stock</p>
-              <h2 class="mt-1 text-lg font-black text-slate-800">{{ vehiculoAsignado()?.placa || 'Mi vehículo' }} — Mi inventario</h2>
+              <p class="text-xs font-bold uppercase tracking-wide text-blue-600">Mi stock — {{ vehiculoAsignado()?.placa || 'Sin placa' }}</p>
+              <h2 class="mt-1 text-lg font-black text-slate-800">Inventario del vehículo</h2>
             </div>
             <button type="button" (click)="cargarDatosComerciales()" class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700">Actualizar</button>
           </div>
@@ -114,7 +114,7 @@
                 <div class="grid grid-cols-2 gap-2 rounded-xl bg-slate-50 p-3 text-xs sm:grid-cols-4">
                   <strong class="col-span-2 text-slate-800 sm:col-span-1">{{ productoPorId(stock.productoId) }}</strong>
                   <span class="text-slate-600">Físico: {{ stock.cargado - stock.vendido - stock.entregado + stock.devuelto }}</span>
-                  <span class="text-slate-600">Reservado: {{ stock.reservado }}</span>
+                  <span class="text-slate-600">Reservado: {{ stock.reservado }}<br><small>Última carga: {{ stock.ultimaCargaEn ? (stock.ultimaCargaEn | date:'short') : '—' }}</small></span>
                   <span class="font-bold text-emerald-700">Disponible: {{ stock.disponible }}</span>
                 </div>
               } @empty {

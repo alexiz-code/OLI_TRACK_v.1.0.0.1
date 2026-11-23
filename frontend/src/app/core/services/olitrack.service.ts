@@ -278,6 +278,7 @@ export class OlitrackService {
 
   readonly productividad =
     signal<Productividad[]>([]);
+  readonly ingresosDiariosRepartidor = signal<any[]>([]);
 
   readonly clienteProfile =
     signal<Cliente | null>(null);
@@ -885,12 +886,18 @@ export class OlitrackService {
   async cargarStockVehiculo(
     vehiculoId: string,
     request: {
-      productoId: string;
-      cantidad: number;
+      operacionId: string;
+      productos?: { productoId: string; cantidad: number }[];
+      productoId?: string;
+      cantidad?: number;
       motivo?: string;
     }
   ): Promise<any> {
     return this.post<any>(`/vehiculos/${encodeURIComponent(vehiculoId)}/stock/carga`, request);
+  }
+
+  async devolverStockVehiculo(vehiculoId: string, request: { operacionId: string; productos: { productoId: string; cantidad: number }[]; motivo?: string }): Promise<any> {
+    return this.post<any>(`/vehiculos/${encodeURIComponent(vehiculoId)}/stock/devolucion`, request);
   }
 
   async crearVentaLibre(request: {
@@ -1752,6 +1759,10 @@ async reloadClienteProfile(): Promise<void> {
         '/reportes/productividad'
       )
     );
+  }
+
+  async reloadIngresosDiariosRepartidor(): Promise<void> {
+    this.ingresosDiariosRepartidor.set(await this.get<any[]>('/reportes/ingresos-diarios-repartidor'));
   }
 
   urlExportarPedidosCsv(): string {

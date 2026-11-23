@@ -494,9 +494,19 @@
             [canAsignarPedido]="true"
             [selectedClienteId]="selectedClienteId()"
             (selectCliente)="seleccionarCliente($event)"
+            (selectRepartidor)="selectedRepartidorId.set($event.id)"
             (asignarPedido)="abrirAsignacionPedido($event)"
             height="600px"
           />
+
+          @if (repartidorSeleccionado(); as repartidor) {
+            <section class="mt-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <p class="text-xs font-black uppercase tracking-wide text-blue-700">Datos del repartidor</p>
+              <h3 class="mt-1 font-black text-slate-900">{{ repartidor.nombreUsuario }}</h3>
+              <p class="text-sm text-slate-600">Vehículo: {{ repartidor.placaVehiculo }} · Estado: {{ repartidor.estado }}</p>
+              <div class="mt-3 flex gap-2"><button type="button" (click)="abrirTransferenciaStock('CARGA')" class="rounded-xl bg-blue-700 px-4 py-2 font-bold text-white">+ Cargar stock</button><button type="button" (click)="abrirTransferenciaStock('DEVOLUCION')" class="rounded-xl border px-4 py-2 font-bold">Devolver stock</button></div>
+            </section>
+          }
 
         </div>
 
@@ -510,6 +520,14 @@
       @if (vista() === 'REPORTES') {
 
         <div class="space-y-4">
+
+          <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <h3 class="font-black text-slate-800">Ingresos diarios por repartidor</h3>
+            <p class="mt-1 text-xs text-slate-500">Pedidos contabilizados al entregarse y ventas libres confirmadas. Ingresos brutos del día; las cargas y devoluciones de stock no suman ventas.</p>
+            <div class="mt-3 overflow-x-auto"><table class="w-full min-w-[760px] text-left text-xs"><thead class="text-slate-500"><tr><th class="py-2">Día</th><th>Repartidor</th><th>Pedidos entregados</th><th>Ingreso por pedidos</th><th>Ventas libres</th><th>Ingreso ventas libres</th><th>Total bruto del día</th></tr></thead><tbody>
+              @for (fila of service.ingresosDiariosRepartidor(); track fila.fecha + fila.repartidorId) {<tr class="border-t border-slate-100"><td class="py-2">{{ fila.fecha }}</td><td class="font-semibold">{{ repartidorDeVenta(fila.repartidorId) }}</td><td>{{ fila.pedidosEntregados }}</td><td>S/. {{ fila.ingresosPedidos | number:'1.2-2' }}</td><td>{{ fila.ventasLibres }}</td><td>S/. {{ fila.ingresosVentasLibres | number:'1.2-2' }}</td><td class="font-black text-emerald-700">S/. {{ fila.ingresosTotales | number:'1.2-2' }}</td></tr>} @empty {<tr><td colspan="7" class="py-4 text-center text-slate-500">Todavía no hay ingresos registrados por repartidor.</td></tr>}
+            </tbody></table></div>
+          </section>
 
           <app-incidencias-charts
             [incidencias]="service.incidencias()"
@@ -966,6 +984,9 @@
         <app-pedido-repartidor-modal [pedido]="pedido"
           (cerrar)="pedidoParaRepartidor.set(null)"
           (asignado)="asignacionConfirmada()" />
+      }
+      @if (vehiculoParaStock(); as vehiculo) {
+        <app-stock-vehiculo-modal [vehiculo]="vehiculo" [nombreRepartidor]="repartidorSeleccionado()?.nombreUsuario ?? 'Repartidor'" [modo]="modoTransferencia()" (cerrar)="vehiculoParaStock.set(null)" (completado)="service.reloadProductos(true)" />
       }
 
     </div>

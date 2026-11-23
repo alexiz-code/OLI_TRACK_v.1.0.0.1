@@ -59,4 +59,13 @@ public class VehiculoController {
         return vehiculoService.cargar(id, request)
                 .map(response -> ResponseEntity.status(HttpStatus.CREATED).body(response));
     }
+
+    @PostMapping("/{id}/stock/devolucion")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'SUPERVISOR')")
+    public Mono<ResponseEntity<InventarioVehiculo>> devolver(
+            @PathVariable String id,
+            @Valid @RequestBody VehiculoDTO.CargaRequest request) {
+        return vehiculoService.devolver(id, request)
+                .map(response -> ResponseEntity.status(HttpStatus.CREATED).body(response));
+    }
 }
