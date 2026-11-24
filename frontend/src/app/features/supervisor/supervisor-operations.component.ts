@@ -10,6 +10,7 @@ import { PedidoEvidenciaComponent } from '../../shared/components/pedido-evidenc
 import { PedidoAsignacionModalComponent } from '../../shared/components/pedido-asignacion-modal.component';
 import { PedidoRepartidorModalComponent } from '../../shared/components/pedido-repartidor-modal.component';
 import { StockVehiculoModalComponent } from '../../shared/components/stock-vehiculo-modal.component';
+import { AdminVehiclesComponent } from '../admin/admin-vehicles.component';
 
 import {
   EstadoPedido,
@@ -21,6 +22,7 @@ type Vista =
   | 'BANDEJA'
   | 'ALERTAS'
   | 'MAPA'
+  | 'FLOTA'
   | 'REPORTES';
 
 @Component({
@@ -36,7 +38,8 @@ type Vista =
     PedidoEvidenciaComponent,
     PedidoAsignacionModalComponent,
     PedidoRepartidorModalComponent,
-    StockVehiculoModalComponent
+    StockVehiculoModalComponent,
+    AdminVehiclesComponent
   ],
   templateUrl: './supervisor-operations.component.html'
 })
@@ -187,6 +190,9 @@ export class SupervisorOperationsComponent implements OnInit {
         this.service.reloadConfiguracion(),
         this.service.reloadPedidosAdmin()
       ]);
+
+    } else if (v === 'FLOTA') {
+      await Promise.all([this.service.reloadRepartidores(), this.service.reloadProductos(true), this.service.reloadPedidosAdmin()]);
 
     } else if (v === 'REPORTES') {
 

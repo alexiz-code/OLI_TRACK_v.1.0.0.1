@@ -14,6 +14,7 @@ import com.example.backend.repository.RepartidorRepository;
 import com.example.backend.repository.ClienteRepository;
 import com.example.backend.repository.PedidoRepository;
 import com.example.backend.repository.UsuarioRepository;
+import com.example.backend.repository.VehiculoRepository;
 import org.springframework.http.HttpStatus;
 import com.example.backend.exception.ApiException;
 import org.springframework.stereotype.Service;
@@ -31,6 +32,8 @@ public class RepartidorService {
     private final ClienteRepository clienteRepository;
     private final PedidoRepository pedidoRepository;
     private final EntityMapper mapper;
+    @org.springframework.beans.factory.annotation.Autowired
+    private VehiculoRepository vehiculoRepository;
 
     public RepartidorService(RepartidorRepository repartidorRepository, UsuarioRepository usuarioRepository,
                              ClienteRepository clienteRepository, PedidoRepository pedidoRepository,
@@ -54,11 +57,7 @@ public class RepartidorService {
                         return Mono.error(new OperacionInvalidaException(
                                 "No se puede crear una moto para un usuario desactivado"));
                     }
-                    return placaDisponible(request.getPlacaVehiculo(), null)
-                            .flatMap(placa -> {
-                                request.setPlacaVehiculo(placa);
-                                return repartidorRepository.findByUsuarioId(usuario.getId());
-                            });
+                    return repartidorRepository.findByUsuarioId(usuario.getId());
                 })
                 .flatMap(existente -> Mono.<RepartidorDTO.Response>error(
                         new OperacionInvalidaException("Este usuario ya tiene un perfil de repartidor")))
@@ -112,7 +111,20 @@ public class RepartidorService {
 
     public Flux<RepartidorDTO.Response> listar() {
         return sincronizarEstados()
-                .thenMany(repartidorRepository.findAll().map(mapper::toDTO));
+                .thenMany(repartidorRepository.findAll().flatMap(this::enriquecer));
+    }
+
+    private Mono<RepartidorDTO.Response> enriquecer(Repartidor repartidor) {
+        Mono<RepartidorDTO.Response> conUsuario = usuarioRepository.findById(repartidor.getUsuarioId()).map(usuario -> {
+            RepartidorDTO.Response response = mapper.toDTO(repartidor);
+            response.setNombreUsuario(usuario.getNombre()); response.setEmailUsuario(usuario.getEmail());
+            response.setTelefonoUsuario(usuario.getTelefono());
+            return response;
+        }).defaultIfEmpty(mapper.toDTO(repartidor));
+        if (repartidor.getVehiculoId() == null || vehiculoRepository == null) return conUsuario;
+        return conUsuario.flatMap(response -> vehiculoRepository.findById(repartidor.getVehiculoId()).map(vehiculo -> {
+            response.setEstadoVehiculo(vehiculo.getEstadoOperativo()); response.setPlacaVehiculo(vehiculo.getPlaca()); return response;
+        }).defaultIfEmpty(response));
     }
 
     /** Repartidores libres para que un administrador o cliente les asigne un pedido. */
@@ -120,6 +132,7 @@ public class RepartidorService {
         return sincronizarEstados()
                 .thenMany(repartidorRepository.findByEstado(EstadoRepartidor.DISPONIBLE))
                 .filter(Repartidor::isActivo)
+                .filter(repartidor -> repartidor.getVehiculoId() != null || repartidor.getPlacaVehiculo() != null)
                 .map(mapper::toDTO);
     }
 
@@ -216,6 +229,9 @@ public class RepartidorService {
                     }
                     if (estado == null) {
                         return Mono.error(new OperacionInvalidaException("El estado del repartidor es obligatorio"));
+                    }
+                    if (estado != EstadoRepartidor.DESCONECTADO && repartidor.getVehiculoId() == null && repartidor.getPlacaVehiculo() == null) {
+                        return Mono.error(new OperacionInvalidaException("Necesitas un vehículo asignado antes de salir a repartir."));
                     }
                     return tienePedidosActivos(id).flatMap(tienePedidos -> {
                         if (tienePedidos && estado != EstadoRepartidor.EN_RUTA) {

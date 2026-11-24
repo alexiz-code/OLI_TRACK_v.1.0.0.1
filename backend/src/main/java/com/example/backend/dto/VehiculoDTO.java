@@ -18,6 +18,13 @@ public class VehiculoDTO {
         private String placa;
         private String descripcion;
         private String repartidorId;
+        private String marca;
+        private String modelo;
+        private String tipo;
+        private String color;
+        private Integer anio;
+        private Double capacidadMaximaKg;
+        private String estadoOperativo;
     }
 
     @Data
@@ -43,6 +50,14 @@ public class VehiculoDTO {
         private String placa;
         private String descripcion;
         private String repartidorId;
+        private String marca;
+        private String modelo;
+        private String tipo;
+        private String color;
+        private Integer anio;
+        private Double capacidadMaximaKg;
+        private String estadoOperativo;
+        private String fotoUrl;
         private boolean activo;
         private Date creadoEn;
         private Date actualizadoEn;
@@ -63,4 +78,11 @@ public class VehiculoDTO {
         private int disponible;
         private Date ultimaCargaEn;
     }
+
+    @Data
+    public static class EstadoRequest { @NotBlank private String estadoOperativo; private String motivo; }
+    @Data
+    public static class AsignacionRequest { @NotBlank private String repartidorId; private String motivo; }
+    @Data
+    public static class MotivoRequest { private String motivo; }
 }

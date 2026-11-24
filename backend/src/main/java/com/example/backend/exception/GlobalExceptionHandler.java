@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.bind.support.WebExchangeBindException;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.ServerWebInputException;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
@@ -50,6 +51,23 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     public Mono<ResponseEntity<ErrorResponse>> manejarAccesoDenegado(AccessDeniedException ex, ServerWebExchange exchange) {
         return responder(HttpStatus.FORBIDDEN, "No tiene permisos para realizar esta acción", exchange, null);
+    }
+
+    /** Conserva los estados 4xx/5xx declarados por los servicios reactivos. */
+    @ExceptionHandler(ResponseStatusException.class)
+    public Mono<ResponseEntity<ErrorResponse>> manejarEstadoHttp(ResponseStatusException ex, ServerWebExchange exchange) {
+        HttpStatus status = HttpStatus.resolve(ex.getStatusCode().value());
+        String mensaje = ex.getReason();
+        if (mensaje == null || mensaje.isBlank()) {
+            mensaje = status == null ? "La operación no pudo completarse" : status.getReasonPhrase();
+        }
+        ErrorResponse body = new ErrorResponse(
+                ex.getStatusCode().value(),
+                status == null ? "Error" : status.getReasonPhrase(),
+                mensaje,
+                exchange.getRequest().getPath().value()
+        );
+        return Mono.just(ResponseEntity.status(ex.getStatusCode()).body(body));
     }
 
     /** Cualquier error no anticipado: nunca se expone el detalle interno al cliente. */

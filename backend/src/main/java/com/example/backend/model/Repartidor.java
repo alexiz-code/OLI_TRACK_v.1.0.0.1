@@ -27,6 +27,7 @@ public class Repartidor implements EntidadFirestore {
     private String usuarioId;
 
     private String placaVehiculo;
+    private String vehiculoId;
     private String tipoVehiculo = "MOTOCICLETA";
     private EstadoRepartidor estado = EstadoRepartidor.DESCONECTADO;
 

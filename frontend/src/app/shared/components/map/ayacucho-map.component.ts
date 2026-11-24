@@ -492,9 +492,12 @@ private async initMap(): Promise<void> {
 
         const isEnRuta =
           rep.estado === 'EN_RUTA';
+        const vehiculoBloqueado = ['PENDIENTE_REVISION', 'MANTENIMIENTO', 'INACTIVO'].includes(rep.estadoVehiculo ?? '');
 
         const classes = [
-          isEnRuta
+          vehiculoBloqueado
+            ? 'bg-red-600'
+            : isEnRuta
             ? 'bg-amber-500'
             : 'bg-emerald-600',
 
@@ -529,7 +532,7 @@ private async initMap(): Promise<void> {
               >
 
                 <span class="font-bold">
-                  Placa: ${esc(rep.placaVehiculo)}
+                  Vehículo: ${esc(rep.placaVehiculo ?? 'Sin vehículo')}
                 </span>
 
                 <span
@@ -537,13 +540,17 @@ private async initMap(): Promise<void> {
                          rounded text-[10px]
                          font-bold
                          ${
-                           isEnRuta
+                           vehiculoBloqueado
+                             ? 'bg-red-100 text-red-800'
+                             : isEnRuta
                              ? 'bg-amber-100 text-amber-800'
                              : 'bg-emerald-100 text-emerald-800'
                          }"
                 >
                   ${esc(rep.estado)}
                 </span>
+
+                ${vehiculoBloqueado ? `<span class="mt-1 block rounded bg-red-50 px-1.5 py-0.5 text-[10px] font-bold text-red-700">Vehículo ${esc(rep.estadoVehiculo)}</span>` : ''}
 
               </div>
 

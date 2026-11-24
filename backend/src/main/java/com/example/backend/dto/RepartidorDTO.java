@@ -23,8 +23,6 @@ public class RepartidorDTO {
         @NotBlank(message = "El usuarioId es obligatorio")
         private String usuarioId;
 
-        @NotBlank(message = "La placa del vehículo es obligatoria")
-        @Size(max = 20, message = "La placa no debe superar 20 caracteres")
         private String placaVehiculo;
     }
 
@@ -53,6 +51,7 @@ public class RepartidorDTO {
     public static class Response {
         private String id;
         private String usuarioId;
+        private String vehiculoId;
         private String placaVehiculo;
         private String tipoVehiculo;
         private EstadoRepartidor estado;
@@ -61,5 +60,7 @@ public class RepartidorDTO {
         private Date creadoEn;
         private String nombreUsuario;
         private String emailUsuario;
+        private String telefonoUsuario;
+        private String estadoVehiculo;
     }
 }

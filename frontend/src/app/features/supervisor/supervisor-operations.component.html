@@ -85,6 +85,8 @@
             Mapa
           </button>
 
+          <button type="button" (click)="irA('FLOTA')" [class]="clase('FLOTA')" class="px-3 py-1.5 rounded-xl text-xs">Vehículos</button>
+
 
           <button
             type="button"
@@ -343,6 +345,10 @@
 
         </div>
 
+      }
+
+      @if (vista() === 'FLOTA') {
+        <app-vehicles-management />
       }
 
 

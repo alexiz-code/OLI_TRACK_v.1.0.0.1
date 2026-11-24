@@ -134,12 +134,15 @@ public class EntityMapper {
         return new RepartidorDTO.Response(
                 model.getId(),
                 model.getUsuarioId(),
+                model.getVehiculoId(),
                 model.getPlacaVehiculo(),
                 model.getTipoVehiculo() != null ? model.getTipoVehiculo() : "MOTOCICLETA",
                 model.getEstado(),
                 toDTO(model.getUbicacionActual()),
                 model.isActivo(),
                 model.getCreadoEn(),
+                null,
+                null,
                 null,
                 null
         );
@@ -292,7 +295,10 @@ public class EntityMapper {
                 model.getDescripcion(),
                 model.getEstado(),
                 model.getCreadoEn(),
-                model.getCerradoEn()
+                model.getCerradoEn(),
+                model.getVehiculoId(), model.getGravedad(), model.getPuedeContinuarTrabajando(),
+                model.getObservaciones(), model.getLatitud(), model.getLongitud(), model.getEvidencias(),
+                model.getDiagnostico(), model.getSolucion(), model.getAutorizadoPor(), model.getCostoReparacion()
         );
     }
 
