@@ -1423,28 +1423,6 @@
 
             </div>
 
-            @if (usuarioForm.rol === 'REPARTIDOR') {
-              <div>
-                <label
-                  class="mb-1.5 block text-sm font-semibold text-slate-700"
-                  for="placaVehiculo"
-                >
-                  Placa del vehículo
-                </label>
-                <input
-                  id="placaVehiculo"
-                  type="text"
-                  [(ngModel)]="usuarioForm.placaVehiculo"
-                  name="placaVehiculo"
-                  [class]="campo"
-                  placeholder="Ej. ABC-123"
-                  maxlength="20"
-                  autocomplete="off"
-                  required
-                />
-              </div>
-            }
-
             <div
               class="app-modal-actions flex flex-col-reverse gap-2 border-t border-slate-200 pt-3 sm:flex-row sm:justify-end"
             >

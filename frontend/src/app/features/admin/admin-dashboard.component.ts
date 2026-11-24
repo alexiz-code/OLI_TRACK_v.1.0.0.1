@@ -53,7 +53,6 @@ interface UsuarioForm {
   password: string;
   telefono: string;
   rol: Rol;
-  placaVehiculo: string;
 }
 
 interface UsuarioEdicionForm {
@@ -70,8 +69,7 @@ const USUARIO_VACIO = (): UsuarioForm => ({
   email: '',
   password: '',
   telefono: '',
-  rol: 'SUPERVISOR',
-  placaVehiculo: ''
+  rol: 'SUPERVISOR'
 });
 
 const PRODUCTO_VACIO = (): ProductoForm => ({
@@ -668,9 +666,6 @@ export class AdminDashboardComponent {
 
   cambiarRolNuevoUsuario(rol: Rol): void {
     this.usuarioForm.rol = rol;
-    if (rol !== 'REPARTIDOR') {
-      this.usuarioForm.placaVehiculo = '';
-    }
   }
 
   placaDeUsuario(usuarioId: string): string {
@@ -750,13 +745,9 @@ export class AdminDashboardComponent {
   }
 
   async crearPerfilRepartidor(usuario: Usuario): Promise<void> {
-    const placa = prompt(
-      `Ingresa la placa del vehículo de ${usuario.nombre}:`
-    )?.trim();
-    if (!placa) return;
 
     try {
-      await this.service.crearPerfilRepartidor(usuario.id, placa);
+      await this.service.crearPerfilRepartidor(usuario.id);
       this.service.triggerToast(
         'SUCCESS',
         'Perfil de repartidor creado',
@@ -899,16 +890,6 @@ export class AdminDashboardComponent {
       return;
     }
 
-    const placaVehiculo = f.placaVehiculo.trim();
-    if (f.rol === 'REPARTIDOR' && !placaVehiculo) {
-      this.service.triggerToast(
-        'WARNING',
-        'Placa requerida',
-        'Ingresa la placa del vehículo para crear el perfil del repartidor.'
-      );
-      return;
-    }
-
     this.guardando.set(true);
 
     try {
@@ -935,7 +916,7 @@ export class AdminDashboardComponent {
 
       if (f.rol === 'REPARTIDOR') {
         try {
-          await this.service.crearPerfilRepartidor(usuario.id, placaVehiculo);
+          await this.service.crearPerfilRepartidor(usuario.id);
         } catch (error) {
           this.service.triggerToast(
             'WARNING',

@@ -43,6 +43,15 @@ public class IncidenciaController {
         });
     }
 
+    @PostMapping("/vehiculo")
+    @PreAuthorize("hasRole('REPARTIDOR')")
+    public Mono<ResponseEntity<IncidenciaDTO.Response>> reportarAveria(@Valid @RequestBody IncidenciaDTO.AveriaVehiculoRequest request) {
+        return SecurityContextUtils.usuarioActual()
+                .flatMap(actual -> repartidorService.obtenerPorUsuarioId(actual.getUid()))
+                .flatMap(perfil -> incidenciaService.registrarAveriaVehiculo(perfil.getId(), request))
+                .map(response -> ResponseEntity.status(HttpStatus.CREATED).body(response));
+    }
+
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'SUPERVISOR')")
     public Flux<IncidenciaDTO.Response> listar() {
@@ -81,5 +90,13 @@ public class IncidenciaController {
     public Mono<IncidenciaDTO.Response> cambiarEstado(@PathVariable String id,
                                                         @Valid @RequestBody IncidenciaDTO.CambiarEstadoRequest request) {
         return incidenciaService.cambiarEstado(id, request.getEstado());
+    }
+
+    @PatchMapping("/{id}/mantenimiento")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'SUPERVISOR')")
+    public Mono<IncidenciaDTO.Response> gestionarMantenimiento(@PathVariable String id,
+            @Valid @RequestBody IncidenciaDTO.GestionMantenimientoRequest request) {
+        return SecurityContextUtils.usuarioActual()
+                .flatMap(actual -> incidenciaService.gestionarMantenimiento(id, request, actual.getUid()));
     }
 }

@@ -73,9 +73,17 @@ export class DriverWorkspaceComponent implements OnInit, OnDestroy {
 
   readonly perfilRepartidorFaltante = signal(false);
   readonly vehiculoAsignado = signal<any | null>(null);
+  readonly tieneVehiculoAsignado = computed(() => !!this.vehiculoAsignado()?.id);
   readonly stockVehiculo = signal<any[]>([]);
   readonly misVentas = signal<any[]>([]);
   readonly mostrarVentaLibre = signal(false);
+  readonly mostrarAveriaVehiculo = signal(false);
+  readonly guardandoAveriaVehiculo = signal(false);
+  tipoAveriaVehiculo = 'MECANICA';
+  gravedadAveriaVehiculo = 'MEDIA';
+  puedeContinuarAveria = true;
+  descripcionAveriaVehiculo = '';
+  observacionesAveriaVehiculo = '';
   readonly guardandoVenta = signal(false);
   readonly productoVentaId = signal('');
   readonly cantidadVenta = signal(1);
@@ -159,9 +167,10 @@ export class DriverWorkspaceComponent implements OnInit, OnDestroy {
       ]);
       const perfil = this.service.repartidorProfile();
       const vehiculos = await this.service.listarVehiculos();
-      const vehiculo = vehiculos.find(item =>
-        String(item.placa ?? '').trim().toLowerCase() === String(perfil?.placaVehiculo ?? '').trim().toLowerCase()
-      );
+      const vehiculo = vehiculos.find(item => item.id === perfil?.vehiculoId)
+        ?? vehiculos.find(item => !perfil?.vehiculoId && item.repartidorId === perfil?.id)
+        ?? vehiculos.find(item => !perfil?.vehiculoId && perfil?.placaVehiculo && String(item.placa ?? '').trim().toLowerCase() === String(perfil.placaVehiculo).trim().toLowerCase());
+      this.vehiculoAsignado.set(vehiculo ?? null);
       this.vehiculoAsignado.set(vehiculo ?? null);
       this.stockVehiculo.set(vehiculo ? await this.service.stockVehiculo(vehiculo.id) : []);
     } catch (error) {
@@ -552,6 +561,32 @@ export class DriverWorkspaceComponent implements OnInit, OnDestroy {
           'Verifica que el pedido esté asignado a tu cuenta y vuelve a intentarlo.'
         )
       );
+    }
+  }
+
+  async enviarAveriaVehiculo(): Promise<void> {
+    if (!this.vehiculoAsignado() || !this.descripcionAveriaVehiculo.trim()) return;
+    this.guardandoAveriaVehiculo.set(true);
+    try {
+      const gps = this.service.repartidorProfile()?.ubicacionActual;
+      await this.service.reportarAveriaVehiculo({
+        tipo: this.tipoAveriaVehiculo,
+        descripcion: this.descripcionAveriaVehiculo.trim(),
+        gravedad: this.gravedadAveriaVehiculo,
+        puedeContinuarTrabajando: this.puedeContinuarAveria,
+        observaciones: this.observacionesAveriaVehiculo.trim() || undefined,
+        latitud: gps?.latitud,
+        longitud: gps?.longitud
+      });
+      this.mostrarAveriaVehiculo.set(false);
+      this.descripcionAveriaVehiculo = '';
+      this.observacionesAveriaVehiculo = '';
+      await Promise.all([this.service.reloadIncidencias(), this.cargarDatosComerciales()]);
+      this.service.triggerToast('SUCCESS', 'Avería reportada', this.puedeContinuarAveria ? 'El administrador y el supervisor fueron notificados.' : 'El vehículo quedó pendiente de revisión y no recibirá nuevas asignaciones.');
+    } catch (error) {
+      this.service.triggerToast('ERROR', 'No se pudo reportar la avería', this.service.mensajeError(error));
+    } finally {
+      this.guardandoAveriaVehiculo.set(false);
     }
   }
 

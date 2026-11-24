@@ -1,6 +1,7 @@
 package com.example.backend.service;
 
 import com.example.backend.dto.DetallePedidoDTO;
+import com.example.backend.dto.CompararRepartidoresDTO;
 import com.example.backend.dto.IncidenciaDTO;
 import com.example.backend.dto.PedidoDTO;
 import com.example.backend.dto.UbicacionDTO;
@@ -94,6 +95,8 @@ public class PedidoService {
 
     private final Storage storage;
     private final String storageBucketName;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private OsrmService osrmService;
 
     private final EntityMapper mapper;
 
@@ -596,14 +599,10 @@ public class PedidoService {
                             .filter(repartidor -> coordenadasValidas(
                                     repartidor.getUbicacionActual()))
                             .collectList()
-                            .flatMapMany(disponibles -> Flux.fromIterable(disponibles.stream()
-                                    .sorted(Comparator.comparingDouble(repartidor ->
-                                            distanciaMetros(destino, repartidor.getUbicacionActual())))
-                                    .toList()))
+                            .flatMapMany(disponibles -> ordenarCandidatosPorEta(disponibles, destino))
                             .concatMap(repartidor -> asignarRepartidor(pedidoId, repartidor.getId(), false)
                                     .onErrorResume(OperacionInvalidaException.class, error ->
-                                            error.getMessage() != null
-                                                    && error.getMessage().contains("no está activo y disponible")
+                                            esCandidatoNoElegible(error)
                                                     ? Mono.empty()
                                                     : Mono.error(error)))
                             .next()
@@ -616,6 +615,30 @@ public class PedidoService {
      * Reintenta asignar pedidos vigentes cuando un repartidor reporta GPS
      * o se pone disponible después de que se creó el pedido.
      */
+    private boolean esCandidatoNoElegible(OperacionInvalidaException error) {
+        if (error.getMessage() == null) return false;
+        String normalizado = Normalizer.normalize(error.getMessage().toLowerCase(Locale.ROOT), Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "");
+        return normalizado.contains("no esta activo y disponible")
+                || normalizado.contains("stock insuficiente")
+                || normalizado.contains("no tiene stock")
+                || normalizado.contains("vehiculo asignado no esta disponible");
+    }
+    private Flux<Repartidor> ordenarCandidatosPorEta(List<Repartidor> disponibles, Ubicacion destino) {
+        if (osrmService == null) {
+            return Flux.fromIterable(disponibles.stream().sorted(Comparator.comparingDouble(repartidor ->
+                    distanciaMetros(destino, repartidor.getUbicacionActual()))).toList());
+        }
+        UbicacionDTO destinoDto = new UbicacionDTO(destino.getLatitud(), destino.getLongitud());
+        return osrmService.compararRepartidores(destinoDto)
+                .flatMapMany(comparacion -> Flux.fromIterable(comparacion.repartidores().stream()
+                        .filter(fila -> fila.duracionMinutos() != null)
+                        .sorted(Comparator.comparing(CompararRepartidoresDTO.ResultadoRepartidorDTO::duracionMinutos))
+                        .map(CompararRepartidoresDTO.ResultadoRepartidorDTO::repartidorId)
+                        .map(id -> disponibles.stream().filter(repartidor -> id.equals(repartidor.getId())).findFirst().orElse(null))
+                        .filter(java.util.Objects::nonNull).toList()));
+    }
+
     public Mono<Void> asignarPedidosSinRepartidor() {
         return pedidoRepository.findAll()
                 .filter(pedido -> !StringUtils.hasText(pedido.getRepartidorId()))

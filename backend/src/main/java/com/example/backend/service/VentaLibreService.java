@@ -70,8 +70,8 @@ public class VentaLibreService {
                                                      Vehiculo vehiculo,
                                                      Producto producto,
                                                      VentaLibreDTO.CrearRequest request) {
-        if (!vehiculo.isActivo()) {
-            return Mono.error(new OperacionInvalidaException("El vehículo no está activo."));
+        if (!vehiculo.isActivo() || !"DISPONIBLE".equals(vehiculo.getEstadoOperativo())) {
+            return Mono.error(new OperacionInvalidaException("El vehiculo esta inactivo, en revision o en mantenimiento y no puede vender."));
         }
         if (!producto.isActivo()) {
             return Mono.error(new OperacionInvalidaException("El producto no está activo."));

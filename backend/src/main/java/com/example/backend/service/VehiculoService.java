@@ -11,8 +11,16 @@ import com.example.backend.repository.HistorialVehiculoRepository;
 import com.example.backend.repository.InventarioVehiculoRepository;
 import com.example.backend.repository.RepartidorRepository;
 import com.example.backend.repository.VehiculoRepository;
+import com.example.backend.repository.PedidoRepository;
+import com.example.backend.model.EstadoPedido;
+import com.example.backend.model.Pedido;
 import com.example.backend.security.SecurityContextUtils;
 import com.example.backend.security.UsuarioAutenticado;
+import com.example.backend.config.FirebaseProperties;
+import com.google.cloud.storage.Blob;
+import com.google.cloud.storage.BlobId;
+import com.google.cloud.storage.BlobInfo;
+import com.google.cloud.storage.Storage;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.stereotype.Service;
@@ -21,6 +29,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.Date;
 import java.util.UUID;
+import java.util.List;
 
 @Service
 public class VehiculoService {
@@ -28,15 +37,24 @@ public class VehiculoService {
     private final InventarioVehiculoRepository inventarioRepository;
     private final RepartidorRepository repartidorRepository;
     private final HistorialVehiculoRepository historialRepository;
+    private final PedidoRepository pedidoRepository;
+    private final Storage storage;
+    private final String storageBucketName;
 
     public VehiculoService(VehiculoRepository vehiculoRepository,
                            InventarioVehiculoRepository inventarioRepository,
                            RepartidorRepository repartidorRepository,
-                           HistorialVehiculoRepository historialRepository) {
+                           HistorialVehiculoRepository historialRepository,
+                           PedidoRepository pedidoRepository,
+                           Storage storage,
+                           FirebaseProperties firebaseProperties) {
         this.vehiculoRepository = vehiculoRepository;
         this.inventarioRepository = inventarioRepository;
         this.repartidorRepository = repartidorRepository;
         this.historialRepository = historialRepository;
+        this.pedidoRepository = pedidoRepository;
+        this.storage = storage;
+        this.storageBucketName = firebaseProperties.getStorageBucket();
     }
 
     public Mono<VehiculoDTO.Response> crear(VehiculoDTO.CrearRequest request) {
@@ -65,19 +83,26 @@ public class VehiculoService {
     public Mono<Void> desactivar(String id) {
         return SecurityContextUtils.usuarioActual().flatMap(actual -> autorizado(actual)
                 .then(vehiculoRepository.findById(id).switchIfEmpty(Mono.error(RecursoNoEncontradoException.de("Vehículo", id))))
-                .flatMap(v -> { v.setActivo(false); v.setEstadoOperativo("INACTIVO"); v.setActualizadoEn(new Date());
-                    return vehiculoRepository.save(v).then(registrarHistorial(id, "DESACTIVACION", "Vehículo desactivado", actual.getUid())); }));
+                .flatMap(v -> tienePedidosActivos(v.getRepartidorId()).flatMap(activos -> {
+                    if (activos) return Mono.error(new ResponseStatusException(HttpStatus.CONFLICT, "No se puede desactivar un vehículo con pedidos activos."));
+                    v.setActivo(false); v.setEstadoOperativo("INACTIVO"); v.setActualizadoEn(new Date());
+                    return vehiculoRepository.save(v).then(registrarHistorial(id, "DESACTIVACION", "Vehículo desactivado", actual.getUid()));
+                })));
     }
 
     public Mono<VehiculoDTO.Response> cambiarEstado(String id, VehiculoDTO.EstadoRequest request) {
         String estado = request.getEstadoOperativo().trim().toUpperCase();
-        if (!java.util.Set.of("DISPONIBLE", "EN_REPARTO", "MANTENIMIENTO", "INACTIVO").contains(estado))
+        if (!java.util.Set.of("DISPONIBLE", "EN_REPARTO", "PENDIENTE_REVISION", "MANTENIMIENTO", "INACTIVO").contains(estado))
             return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Estado operativo no válido."));
         return SecurityContextUtils.usuarioActual().flatMap(actual -> autorizado(actual)
                 .then(vehiculoRepository.findById(id).switchIfEmpty(Mono.error(RecursoNoEncontradoException.de("Vehículo", id))))
-                .flatMap(v -> { v.setEstadoOperativo(estado); v.setActivo(!"INACTIVO".equals(estado)); v.setActualizadoEn(new Date());
+                .flatMap(v -> tienePedidosActivos(v.getRepartidorId()).flatMap(activos -> {
+                    if (activos && ("DISPONIBLE".equals(estado) || "INACTIVO".equals(estado)))
+                        return Mono.error(new ResponseStatusException(HttpStatus.CONFLICT, "Resuelve los pedidos activos antes de cambiar el vehículo a disponible o inactivo."));
+                    v.setEstadoOperativo(estado); v.setActivo(!"INACTIVO".equals(estado)); v.setActualizadoEn(new Date());
                     String detalle = request.getMotivo() == null ? estado : estado + ": " + request.getMotivo();
-                    return vehiculoRepository.save(v).flatMap(guardado -> registrarHistorial(id, "CAMBIO_ESTADO", detalle, actual.getUid()).thenReturn(mapVehiculo(guardado))); }));
+                    return vehiculoRepository.save(v).flatMap(guardado -> registrarHistorial(id, "CAMBIO_ESTADO", detalle, actual.getUid()).thenReturn(mapVehiculo(guardado)));
+                })));
     }
 
     public Mono<VehiculoDTO.Response> asignarRepartidor(String vehiculoId, VehiculoDTO.AsignacionRequest request) {
@@ -86,27 +111,94 @@ public class VehiculoService {
                 .flatMap(v -> repartidorRepository.findById(request.getRepartidorId()).switchIfEmpty(Mono.error(RecursoNoEncontradoException.de("Repartidor", request.getRepartidorId())))
                         .flatMap(r -> {
                             if (!r.isActivo()) return Mono.error(new ResponseStatusException(HttpStatus.CONFLICT, "El repartidor está inactivo."));
-                            String anterior = v.getRepartidorId(); v.setRepartidorId(r.getId()); v.setActualizadoEn(new Date());
-                            r.setVehiculoId(v.getId()); r.setPlacaVehiculo(v.getPlaca());
-                            Mono<Void> liberarAnterior = anterior == null || anterior.equals(r.getId()) ? Mono.empty() : repartidorRepository.findById(anterior)
-                                    .flatMap(prev -> { prev.setVehiculoId(null); prev.setPlacaVehiculo(null); return repartidorRepository.save(prev); }).then();
-                            return liberarAnterior.then(repartidorRepository.save(r)).then(vehiculoRepository.save(v))
-                                    .flatMap(guardado -> registrarHistorial(vehiculoId, "ASIGNACION", "Responsable " + (anterior == null ? "" : anterior + " → ") + r.getId() + (request.getMotivo() == null ? "" : ": " + request.getMotivo()), actual.getUid()).thenReturn(mapVehiculo(guardado)));
+                            return Mono.zip(tienePedidosActivos(r.getId()), vehiculoRepository.findByField("repartidorId", r.getId()).collectList())
+                                    .flatMap(estado -> {
+                                if (estado.getT1()) return Mono.error(new ResponseStatusException(HttpStatus.CONFLICT, "No se puede cambiar el responsable mientras tenga pedidos activos."));
+                                java.util.List<Vehiculo> vehiculosActuales = estado.getT2();
+                                boolean asignadoAotro = vehiculosActuales.stream().anyMatch(actualVehiculo -> !vehiculoId.equals(actualVehiculo.getId()));
+                                if (asignadoAotro) return Mono.error(new ResponseStatusException(HttpStatus.CONFLICT, "El repartidor ya tiene otro vehículo asignado."));
+                                return tienePedidosActivos(v.getRepartidorId()).flatMap(vehiculoConPedidos -> {
+                                    if (vehiculoConPedidos) return Mono.error(new ResponseStatusException(HttpStatus.CONFLICT, "Resuelve los pedidos activos del vehículo antes de cambiar el conductor."));
+                                    return repartidorRepository.asignarVehiculo(vehiculoId, r.getId(), v.getPlaca(), actual.getUid(), request.getMotivo())
+                                            .then(vehiculoRepository.findById(vehiculoId)).map(this::mapVehiculo);
+                                });
+                            });
                         })));
+    }
+
+    private Mono<Boolean> tienePedidosActivos(String repartidorId) {
+        if (repartidorId == null || repartidorId.isBlank()) return Mono.just(false);
+        return pedidoRepository.findByRepartidorId(repartidorId)
+                .filter(p -> p.getEstado() != EstadoPedido.ENTREGADO && p.getEstado() != EstadoPedido.CANCELADO)
+                .hasElements();
     }
 
     public Mono<VehiculoDTO.Response> desasignarRepartidor(String vehiculoId, VehiculoDTO.MotivoRequest request) {
         return SecurityContextUtils.usuarioActual().flatMap(actual -> autorizado(actual)
                 .then(vehiculoRepository.findById(vehiculoId).switchIfEmpty(Mono.error(RecursoNoEncontradoException.de("Vehículo", vehiculoId))))
-                .flatMap(v -> { String repId = v.getRepartidorId(); v.setRepartidorId(null); v.setActualizadoEn(new Date());
-                    Mono<Void> clear = repId == null ? Mono.empty() : repartidorRepository.findById(repId).flatMap(r -> { r.setVehiculoId(null); r.setPlacaVehiculo(null); return repartidorRepository.save(r); }).then();
-                    return clear.then(vehiculoRepository.save(v)).flatMap(guardado -> registrarHistorial(vehiculoId, "DESASIGNACION", request.getMotivo() == null ? "Responsable retirado" : request.getMotivo(), actual.getUid()).thenReturn(mapVehiculo(guardado))); }));
+                .flatMap(v -> tienePedidosActivos(v.getRepartidorId()).flatMap(activos -> {
+                    if (activos) return Mono.error(new ResponseStatusException(HttpStatus.CONFLICT, "Resuelve los pedidos activos antes de retirar al conductor."));
+                    return repartidorRepository.desasignarVehiculo(vehiculoId, actual.getUid(), request.getMotivo())
+                            .then(vehiculoRepository.findById(vehiculoId)).map(this::mapVehiculo);
+                })));
     }
 
     public Flux<HistorialVehiculo> historial(String id) {
         return vehiculoRepository.findById(id).switchIfEmpty(Mono.error(RecursoNoEncontradoException.de("Vehículo", id)))
                 .flatMapMany(v -> historialRepository.findByField("vehiculoId", id));
     }
+
+    public Mono<VehiculoDTO.Response> subirFoto(String id, byte[] bytes, String contentType) {
+        String detectado = tipoImagen(bytes);
+        if (bytes == null || bytes.length == 0 || bytes.length > 5 * 1024 * 1024 || detectado == null || !detectado.equals(contentType))
+            return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "La foto debe ser JPG, PNG o WEBP y no superar 5 MB."));
+        return SecurityContextUtils.usuarioActual().flatMap(actual -> autorizado(actual)
+                .then(vehiculoRepository.findById(id).switchIfEmpty(Mono.error(RecursoNoEncontradoException.de("Vehículo", id))))
+                .flatMap(v -> {
+                    String previo = v.getFotoStoragePath(); String path = "imagenes-vehiculos/" + id + "/" + UUID.randomUUID();
+                    return Mono.fromCallable(() -> storage.create(BlobInfo.newBuilder(storageBucketName, path).setContentType(detectado).build(), bytes))
+                            .subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic())
+                            .flatMap(blob -> {
+                                if (blob == null) return Mono.error(new IllegalStateException("No se guardó la fotografía."));
+                                v.setFotoStoragePath(path); v.setFotoUrl("/api/vehiculos/" + id + "/foto?v=" + UUID.randomUUID());
+                                v.setActualizadoEn(new Date());
+                                return vehiculoRepository.save(v).flatMap(saved -> registrarHistorial(id, "FOTO", "Fotografía actualizada", actual.getUid())
+                                        .then(eliminarFotoStorage(previo)).thenReturn(mapVehiculo(saved)));
+                            });
+                }));
+    }
+
+    public Mono<ImagenVehiculo> obtenerFoto(String id) {
+        return vehiculoRepository.findById(id).switchIfEmpty(Mono.error(RecursoNoEncontradoException.de("Vehículo", id)))
+                .flatMap(v -> {
+                    if (v.getFotoStoragePath() == null) return Mono.error(RecursoNoEncontradoException.de("Foto del vehículo", id));
+                    return Mono.fromCallable(() -> {
+                        Blob blob = storage.get(BlobId.of(storageBucketName, v.getFotoStoragePath()));
+                        if (blob == null) throw RecursoNoEncontradoException.de("Foto del vehículo", id);
+                        return new ImagenVehiculo(storage.readAllBytes(blob.getBlobId()), blob.getContentType() == null ? "image/jpeg" : blob.getContentType());
+                    }).subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic());
+                });
+    }
+
+    public Mono<Void> eliminarFoto(String id) {
+        return SecurityContextUtils.usuarioActual().flatMap(actual -> autorizado(actual)
+                .then(vehiculoRepository.findById(id).switchIfEmpty(Mono.error(RecursoNoEncontradoException.de("Vehículo", id))))
+                .flatMap(v -> { String path = v.getFotoStoragePath(); v.setFotoStoragePath(null); v.setFotoUrl(null); v.setActualizadoEn(new Date());
+                    return vehiculoRepository.save(v).then(eliminarFotoStorage(path)).then(registrarHistorial(id, "FOTO", "Fotografía eliminada", actual.getUid())); }));
+    }
+
+    private Mono<Void> eliminarFotoStorage(String path) {
+        if (path == null) return Mono.empty();
+        return Mono.fromCallable(() -> storage.delete(BlobId.of(storageBucketName, path))).subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic()).then();
+    }
+    private String tipoImagen(byte[] b) {
+        if (b == null || b.length < 12) return null;
+        if ((b[0] & 255) == 255 && (b[1] & 255) == 216 && (b[2] & 255) == 255) return "image/jpeg";
+        if ((b[0] & 255) == 137 && b[1] == 80 && b[2] == 78 && b[3] == 71) return "image/png";
+        if (b[0] == 'R' && b[1] == 'I' && b[2] == 'F' && b[3] == 'F' && b[8] == 'W' && b[9] == 'E' && b[10] == 'B' && b[11] == 'P') return "image/webp";
+        return null;
+    }
+    public record ImagenVehiculo(byte[] contenido, String contentType) { }
 
     private Mono<Void> autorizado(UsuarioAutenticado actual) {
         return actual.getRol() == Rol.ADMINISTRADOR || actual.getRol() == Rol.SUPERVISOR ? Mono.empty()

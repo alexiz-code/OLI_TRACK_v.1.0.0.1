@@ -246,7 +246,16 @@ public class InventarioVehiculoRepository extends FirestoreRepository<Inventario
             java.util.Map<String, Integer> cantidades, String motivo, String usuarioResponsableId) {
         DocumentReference operacionRef = firestore.collection(Colecciones.OPERACIONES_VEHICULO).document(operacionId);
         return ReactiveFirebase.defer(() -> firestore.runTransaction(transaction -> {
-            if (transaction.get(operacionRef).get().exists()) return null;
+            DocumentSnapshot operacionExistente = transaction.get(operacionRef).get();
+            if (operacionExistente.exists()) {
+                Object lineas = operacionExistente.get("productos");
+                if (lineas instanceof java.util.Map<?, ?> mapa && !mapa.isEmpty()) {
+                    String productoId = String.valueOf(mapa.keySet().iterator().next());
+                    return transaction.get(collection().document(vehiculoId + "_" + productoId)).get()
+                            .toObject(InventarioVehiculo.class);
+                }
+                return null;
+            }
             if (cantidades == null || cantidades.isEmpty()) throw new IllegalArgumentException("Indica productos para devolver.");
             java.util.List<MovimientoDevolucion> cambios = new java.util.ArrayList<>();
             for (var entrada : cantidades.entrySet()) {

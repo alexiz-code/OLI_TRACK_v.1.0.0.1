@@ -9,6 +9,7 @@ import com.example.backend.model.EstadoRepartidor;
 import com.example.backend.model.Repartidor;
 import com.example.backend.model.Ubicacion;
 import com.example.backend.repository.RepartidorRepository;
+import com.example.backend.repository.VehiculoRepository;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.auth.oauth2.IdTokenCredentials;
 import com.google.auth.oauth2.IdTokenProvider;
@@ -39,6 +40,7 @@ public class OsrmService {
     private final WebClient webClient;
     private final OsrmProperties properties;
     private final RepartidorRepository repartidorRepository;
+    private final VehiculoRepository vehiculoRepository;
     private final IdTokenCredentials idTokenCredentials;
 
     public OsrmService(
@@ -47,9 +49,16 @@ public class OsrmService {
             RepartidorRepository repartidorRepository,
             GoogleCredentials googleCredentials
     ) {
+        this(osrmWebClient, properties, repartidorRepository, googleCredentials, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public OsrmService(WebClient osrmWebClient, OsrmProperties properties, RepartidorRepository repartidorRepository,
+                       GoogleCredentials googleCredentials, VehiculoRepository vehiculoRepository) {
         this.webClient = osrmWebClient;
         this.properties = properties;
         this.repartidorRepository = repartidorRepository;
+        this.vehiculoRepository = vehiculoRepository;
         this.idTokenCredentials = createIdTokenCredentials(properties, googleCredentials);
     }
 
@@ -97,6 +106,13 @@ public class OsrmService {
         return repartidorRepository.findByEstado(EstadoRepartidor.DISPONIBLE)
                 .filter(Repartidor::isActivo)
                 .filter(repartidor -> coordenadasValidas(repartidor.getUbicacionActual()))
+                .filterWhen(repartidor -> {
+                    if (vehiculoRepository == null) return Mono.just(true);
+                    if (repartidor.getVehiculoId() == null) return Mono.just(false);
+                    return vehiculoRepository.findById(repartidor.getVehiculoId())
+                            .map(vehiculo -> vehiculo.isActivo() && "DISPONIBLE".equals(vehiculo.getEstadoOperativo()))
+                            .defaultIfEmpty(false);
+                })
                 .take((long) properties.getMaxTableCandidates() + 1)
                 .collectList()
                 .flatMap(repartidores -> {

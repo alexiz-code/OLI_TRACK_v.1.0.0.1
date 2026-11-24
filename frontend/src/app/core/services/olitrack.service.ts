@@ -1168,12 +1168,11 @@ async reloadClienteProfile(): Promise<void> {
   }
 
   async crearPerfilRepartidor(
-    usuarioId: string,
-    placaVehiculo: string
+    usuarioId: string
   ): Promise<Repartidor> {
     const repartidor = await this.post<Repartidor>(
       '/repartidores',
-      { usuarioId, placaVehiculo }
+      { usuarioId }
     );
     await this.reloadRepartidores();
     return repartidor;
@@ -1704,6 +1703,14 @@ async reloadClienteProfile(): Promise<void> {
       'Incidencia registrada',
       'El administrador la revisará pronto.'
     );
+  }
+
+  async reportarAveriaVehiculo(request: { tipo: string; descripcion: string; gravedad: string; puedeContinuarTrabajando: boolean; observaciones?: string; latitud?: number; longitud?: number }): Promise<any> {
+    return this.post<any>('/incidencias/vehiculo', request);
+  }
+
+  async gestionarMantenimientoIncidencia(incidenciaId:string, request:{diagnostico:string;solucion?:string;observaciones?:string;costoReparacion?:number;finalizar:boolean}):Promise<any>{
+    return this.patch<any>(`/incidencias/${encodeURIComponent(incidenciaId)}/mantenimiento`,request);
   }
 
   async cambiarEstadoIncidencia(
