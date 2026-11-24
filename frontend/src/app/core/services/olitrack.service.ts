@@ -871,16 +871,56 @@ export class OlitrackService {
     return this.get<any[]>('/vehiculos');
   }
 
+  async obtenerHistorialVehiculo(vehiculoId: string): Promise<any[]> {
+    return this.get<any[]>(`/vehiculos/${encodeURIComponent(vehiculoId)}/historial`);
+  }
+
   async stockVehiculo(vehiculoId: string): Promise<any[]> {
     return this.get<any[]>(`/vehiculos/${encodeURIComponent(vehiculoId)}/stock`);
   }
 
   async crearVehiculo(request: {
     placa: string;
+    marca?: string;
+    modelo?: string;
+    tipo?: string;
+    color?: string;
+    anio?: number;
+    capacidadMaximaKg?: number;
     descripcion?: string;
     repartidorId?: string;
+    estadoOperativo?: string;
   }): Promise<any> {
     return this.post<any>('/vehiculos', request);
+  }
+
+  async actualizarVehiculo(vehiculoId: string, request: Record<string, unknown>): Promise<any> {
+    return this.put<any>(`/vehiculos/${encodeURIComponent(vehiculoId)}`, request);
+  }
+
+  async desactivarVehiculo(vehiculoId: string): Promise<void> {
+    await this.remove<void>(`/vehiculos/${encodeURIComponent(vehiculoId)}`);
+  }
+
+  async cambiarEstadoVehiculo(vehiculoId: string, estadoOperativo: string, motivo?: string): Promise<any> {
+    return this.patch<any>(`/vehiculos/${encodeURIComponent(vehiculoId)}/estado`, { estadoOperativo, motivo });
+  }
+
+  async asignarRepartidorVehiculo(vehiculoId: string, repartidorId: string, motivo?: string): Promise<any> {
+    return this.put<any>(`/vehiculos/${encodeURIComponent(vehiculoId)}/repartidor`, { repartidorId, motivo });
+  }
+
+  async desasignarRepartidorVehiculo(vehiculoId: string, motivo: string): Promise<any> {
+    return this.post<any>(`/vehiculos/${encodeURIComponent(vehiculoId)}/repartidor/desasignar`, { motivo });
+  }
+
+  async subirFotoVehiculo(vehiculoId: string, archivo: File): Promise<any> {
+    const formData = new FormData(); formData.append('archivo', archivo);
+    return this.post<any>(`/vehiculos/${encodeURIComponent(vehiculoId)}/foto`, formData);
+  }
+
+  async eliminarFotoVehiculo(vehiculoId: string): Promise<any> {
+    return this.remove<any>(`/vehiculos/${encodeURIComponent(vehiculoId)}/foto`);
   }
 
   async cargarStockVehiculo(

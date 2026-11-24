@@ -24,6 +24,7 @@ import { PedidoEvidenciaComponent } from '../../shared/components/pedido-evidenc
 import { PedidoAsignacionModalComponent } from '../../shared/components/pedido-asignacion-modal.component';
 import { PedidoRepartidorModalComponent } from '../../shared/components/pedido-repartidor-modal.component';
 import { StockVehiculoModalComponent } from '../../shared/components/stock-vehiculo-modal.component';
+import { AdminVehiclesComponent } from './admin-vehicles.component';
 import {  OlitrackService, ProductoRequest} from '../../core/services/olitrack.service';
 import {  Cliente, MovimientoRequest, Pedido, Producto, Repartidor, Rol, Usuario} from '../../core/models/olitrack.models';
 
@@ -33,6 +34,7 @@ type Tab =
   | 'PEDIDOS'
   | 'USUARIOS'
   | 'CATALOGO'
+  | 'VEHICULOS'
   | 'REPORTES';
 
 interface ProductoForm {
@@ -124,6 +126,7 @@ const CAMPO =
     PedidoAsignacionModalComponent,
     PedidoRepartidorModalComponent,
     StockVehiculoModalComponent,
+    AdminVehiclesComponent,
     IncidenciasChartsComponent,
     PedidoEvidenciaComponent
   ],
@@ -166,6 +169,10 @@ export class AdminDashboardComponent {
     {
       id: 'CATALOGO' as Tab,
       label: 'Catálogo'
+    },
+    {
+      id: 'VEHICULOS' as Tab,
+      label: 'Vehículos'
     },
     {
       id: 'REPORTES' as Tab,

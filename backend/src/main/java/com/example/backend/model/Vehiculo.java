@@ -16,6 +16,15 @@ public class Vehiculo implements EntidadFirestore {
     private String id;
     private String placa;
     private String descripcion;
+    private String marca;
+    private String modelo;
+    private String tipo;
+    private String color;
+    private Integer anio;
+    private Double capacidadMaximaKg;
+    private String estadoOperativo = "DISPONIBLE";
+    private String fotoStoragePath;
+    private String fotoUrl;
     private String repartidorId;
     private boolean activo = true;
     @ServerTimestamp

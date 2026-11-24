@@ -24,6 +24,7 @@ public final class Colecciones {
     public static final String PROMOCIONES = "promociones";
     public static final String FAQS = "faqs";
     public static final String VEHICULOS = "vehiculos";
+    public static final String HISTORIAL_VEHICULOS = "historialVehiculos";
     public static final String INVENTARIO_VEHICULOS = "inventarioVehiculos";
     public static final String MOVIMIENTOS_INVENTARIO_VEHICULOS = "movimientosInventarioVehiculos";
     public static final String RESERVAS_STOCK = "reservasStock";
